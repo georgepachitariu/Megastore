@@ -7,7 +7,7 @@ public class HelloWorldProducer implements Runnable {
     public void run() {
         try {
             // Create a ConnectionFactory
-            ActiveMQConnectionFactory connectionFactory = new ActiveMQConnectionFactory("vm://localhost");
+            ActiveMQConnectionFactory connectionFactory = new ActiveMQConnectionFactory("tcp://127.0.0.1:61616");
 
             // Create a Connection
             Connection connection = connectionFactory.createConnection();
@@ -23,7 +23,7 @@ public class HelloWorldProducer implements Runnable {
             MessageProducer producer = session.createProducer(destination);
             producer.setDeliveryMode(DeliveryMode.NON_PERSISTENT);
 
-            // Create a messages
+            // Create a message
             String text = "Hello world! From: " + Thread.currentThread().getName() + " : " + this.hashCode();
             TextMessage message = session.createTextMessage(text);
 
