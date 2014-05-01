@@ -1,8 +1,9 @@
 package megastore.paxos;
 
-import org.apache.activemq.ActiveMQConnectionFactory;
-
-import javax.jms.*;
+import java.io.IOException;
+import java.net.InetSocketAddress;
+import java.nio.ByteBuffer;
+import java.nio.channels.SocketChannel;
 import java.util.List;
 
 public class Paxos {
@@ -34,36 +35,31 @@ public class Paxos {
         // Phase 1. (a) A proposer selects a proposal number n and sends a prepare
         // request with number n to a majority of acceptors.
         for(String s : nodesURL)
-            if(listeningThread.getCurrentUrl()!=s)
+            if(! listeningThread.getCurrentUrl().equals( s ))
                 sendMessage(s,
-                    new Proposal(listeningThread.getCurrentUrl(),  1,   value). toString()
-            );
+                        new Proposal(listeningThread.getCurrentUrl(),  1,   value). toString()
+                );
     }
 
     public void sendMessage(String nodeUrl, String message) {
         try {
-            // Create a ConnectionFactory
-            ActiveMQConnectionFactory connectionFactory = new ActiveMQConnectionFactory(nodeUrl);
+            SocketChannel socketChannel = SocketChannel.open();
+            socketChannel.configureBlocking(true);
+            socketChannel.connect(new InetSocketAddress(nodeUrl.split(":")[0],
+                    Integer.parseInt(nodeUrl.split(":")[1])
+            ));
 
-            // Create a Connection
-            Connection connection = connectionFactory.createConnection();
-            connection.start();
 
-            // Create a Session
-            Session session = connection.createSession(false, Session.AUTO_ACKNOWLEDGE);
+            ByteBuffer buf = ByteBuffer.allocate(1000);
+            buf.clear();
+            buf.put(message.getBytes());
 
-            // Create the destination (Topic or Queue)
-            Destination destination = session.createQueue("TEST.FOO");
+            buf.flip();
 
-            MessageProducer producer = session.createProducer(destination);
-            producer.setDeliveryMode(DeliveryMode.NON_PERSISTENT);
-
-            // Create a message
-            TextMessage textMessage = session.createTextMessage(message);
-            producer.send(textMessage);
-
-        } catch (Exception e) {
-            System.out.println("Caught: " + e);
+            while (buf.hasRemaining()) {
+                socketChannel.write(buf);
+            }
+        } catch (IOException e) {
             e.printStackTrace();
         }
     }

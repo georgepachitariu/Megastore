@@ -1,70 +1,65 @@
 package megastore.paxos;
 
-import org.apache.activemq.ActiveMQConnectionFactory;
+import java.io.IOException;
+import java.net.InetAddress;
+import java.net.InetSocketAddress;
+import java.net.UnknownHostException;
+import java.nio.ByteBuffer;
+import java.nio.channels.ServerSocketChannel;
+import java.nio.channels.SocketChannel;
 
-import javax.jms.*;
-
-public class ListeningThread  implements Runnable, ExceptionListener {
-
-    private  MessageConsumer consumer;
-    private Session session;
-    private Connection connection;
+public class ListeningThread  implements Runnable  {
 
     private boolean isAlive;
-    private Broker broker;
+    private final String port;
 
     private Proposal highestProposalAnswered;
+    private ServerSocketChannel serverSocketChannel;
 
     public ListeningThread(String port) {
-        // start the Broker Server first
-        broker=new Broker(port);
-        Thread brokerThread = new Thread(broker);
-        brokerThread.setDaemon(false);
-        brokerThread.start();
-
-        // Create a ConnectionFactory
-        ActiveMQConnectionFactory connectionFactory = new ActiveMQConnectionFactory(broker.getCurrentUrl());
 
         try {
-            // Create a Connection
-            connection = connectionFactory.createConnection();
-            connection.start();
-            connection.setExceptionListener(this);
-
-            // Create a Session
-            session = connection.createSession(false, Session.AUTO_ACKNOWLEDGE);
-
-            // Create the destination (Topic or Queue)
-            Destination destination = session.createQueue("TEST.FOO");
-
-            // Create a MessageConsumer from the Session to the Topic or Queue
-            consumer = session.createConsumer(destination);
-        }  catch (Exception e) {
-            System.out.println("Caught: " + e);
+            serverSocketChannel = ServerSocketChannel.open();
+            serverSocketChannel.socket().bind(new InetSocketAddress(Integer.parseInt(port)));
+            serverSocketChannel.configureBlocking(true);
+        } catch (IOException e) {
             e.printStackTrace();
         }
 
         isAlive=true;
         highestProposalAnswered=null;
+        this.port=port;
     }
 
     @Override
     public void run() {
-        try {
-            // Wait for a message
-            Message message=null;
-            do {
-                message = consumer.receive(1000);
 
-                if (message instanceof TextMessage) {
-                    TextMessage textMessage = (TextMessage) message;
-                    String text = textMessage.getText();
-                    String mess=getResponse(text);
-                 }
-            }while (isAlive);
-            close();
-        } catch (Exception e) {
-            System.out.println("Caught: " + e);
+        try {
+            while (true) {
+                SocketChannel socketChannel = serverSocketChannel.accept();
+                socketChannel.configureBlocking(true);
+
+                ByteBuffer buffer=ByteBuffer.allocate(1024);
+                int size=socketChannel.read(buffer);
+
+                socketChannel.close();
+
+//                while(! key.isReadable())
+//                    try {
+//                        Thread.sleep(10);
+//                    } catch (InterruptedException e) {
+//                        e.printStackTrace();
+//                    }
+
+                buffer.flip();
+                byte[] b=new byte[size];
+                buffer.get(b);
+                String message = new String (b);
+                getResponse(message);
+//                selector.close();
+            }
+        }
+        catch (IOException e) {
             e.printStackTrace();
         }
     }
@@ -91,28 +86,16 @@ public class ListeningThread  implements Runnable, ExceptionListener {
         return null;
     }
 
-    private void close() {
-        try {
-            consumer.close();
-            session.close();
-            connection.close();
-
-        } catch (Exception e) {
-            System.out.println("Caught: " + e);
-            e.printStackTrace();
-        }
-    }
-
-    @Override
-    public void onException(JMSException e) {
-        System.out.println("JMS Exception occurred.  Shutting down client.");
-    }
-
     public void stopThread() {
         isAlive = false;
     }
 
     public String getCurrentUrl() {
-        return broker.getCurrentUrl();
+        try {
+            return InetAddress.getLocalHost().getHostAddress()+ ":" +port;
+        } catch (UnknownHostException e) {
+            e.printStackTrace();
+        }
+        return null;
     }
 }

@@ -6,7 +6,7 @@ import org.junit.Test;
 
 import java.util.LinkedList;
 
-import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
 
 public class Phase1Unit {
@@ -18,26 +18,29 @@ public class Phase1Unit {
 //    than n and with the highest-numbered proposal (if any) that it has accepted.
 
     @Test
-    public void sendPrepareRequest() {
+    public void sendPrepareRequest() throws InterruptedException {
         //    Phase 1. (a) A proposer selects a proposal number n and sends a prepare
         //    request with number n to a majority of acceptors.
-        String n1="tcp://192.168.1.100:61616";
-        String n2="tcp://192.168.1.100:61617";
+        String n2="192.168.1.100:61617";
         LinkedList<String> list =new LinkedList<String>();
-        list.add(n1);
         list.add(n2);
 
         Paxos p1=new Paxos("61616",list);
 
-        ListeningThread mockedThread = mock(ListeningThread.class);
-        Paxos p2=new Paxos("61617",list,mockedThread);
+        ListeningThread mockedThread = spy(new ListeningThread("61617"));
+
+       Thread runThread = new Thread(mockedThread);
+        runThread .setDaemon(false);
+        runThread .start();
 
         p1.proposeValue(new Integer(7));
 
-
-        verify(mockedThread).getResponse("P1,tcp://192.168.1.100:61616,7");
+        Thread.sleep(100);
+        verify(mockedThread).getResponse("P1,192.168.1.100:61616,7");
         mockedThread.stopThread();
     }
+
+
 
 
 }
