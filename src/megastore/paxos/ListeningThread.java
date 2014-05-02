@@ -1,5 +1,7 @@
 package megastore.paxos;
 
+import megastore.paxos.message.*;
+
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
@@ -7,16 +9,19 @@ import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
+import java.util.LinkedList;
+import java.util.List;
 
 public class ListeningThread  implements Runnable  {
 
+    private Paxos paxos;
     private boolean isAlive;
     private final String port;
+    private List<Message> knownMessageTypes;
 
-    private Proposal highestProposalAnswered;
     private ServerSocketChannel serverSocketChannel;
 
-    public ListeningThread(String port) {
+    public ListeningThread(Paxos paxos,String port) {
 
         try {
             serverSocketChannel = ServerSocketChannel.open();
@@ -26,17 +31,27 @@ public class ListeningThread  implements Runnable  {
             e.printStackTrace();
         }
 
+        this.paxos=paxos;
         isAlive=true;
-        highestProposalAnswered=null;
         this.port=port;
+
+        knownMessageTypes=new LinkedList();
+        knownMessageTypes.add(new PrepareRequest(paxos,null,null,0,0,null));
+        knownMessageTypes.add(new PrepReqAccepted(paxos,null,null,0, null));
+        knownMessageTypes.add(new PrepReqRejected(null,null,null,0));
+        knownMessageTypes.add(new NullMessage(null,null));
+    }
+
+    public ListeningThread(Paxos paxos,String port, List<Message> knownMessageTypes) {
+        this(paxos,port);
+        this.knownMessageTypes=knownMessageTypes;
     }
 
     @Override
     public void run() {
-
         try {
-            while (true) {
-                SocketChannel socketChannel = serverSocketChannel.accept();
+            while (isAlive) {
+                SocketChannel socketChannel= serverSocketChannel.accept();
                 socketChannel.configureBlocking(true);
 
                 ByteBuffer buffer=ByteBuffer.allocate(1024);
@@ -44,46 +59,25 @@ public class ListeningThread  implements Runnable  {
 
                 socketChannel.close();
 
-//                while(! key.isReadable())
-//                    try {
-//                        Thread.sleep(10);
-//                    } catch (InterruptedException e) {
-//                        e.printStackTrace();
-//                    }
-
                 buffer.flip();
                 byte[] b=new byte[size];
                 buffer.get(b);
                 String message = new String (b);
-                getResponse(message);
-//                selector.close();
+
+                String[] parts = message.split(",");
+
+                boolean recognized=false;
+                for(Message m : knownMessageTypes)
+                    if(m.getID().equals(parts[0])) {
+                        m.act(parts);
+                        recognized=true;
+                    }
+                if(recognized==false)
+                    System.out.println("Network Message Not Recognized");
             }
-        }
-        catch (IOException e) {
+        } catch (IOException e) {
             e.printStackTrace();
         }
-    }
-
-    public String getResponse(String text) {
-        if(text.startsWith("P")) {
-//            If an acceptor receives a prepare request with number n greater than
-//            that of any prepare request to which it has already responded,
-            text=text.substring(1);
-            int number= Integer.parseInt(text.split(",")[0]);
-            String value= text.split(",")[2];
-
-            if(highestProposalAnswered==null)
-                return "AP";
-            else if(highestProposalAnswered.nr< number )  {
-               // then it responds to the request with a promise not to accept any more proposals numbered less
-               // than n and with the highest-numbered proposal (if any) that it has accepted.
-                String result="AP"+highestProposalAnswered.value.toString();  //wrong
-                this.highestProposalAnswered=new Proposal(null, number,value);
-                return result;
-            }
-            return "RP";
-        }
-        return null;
     }
 
     public void stopThread() {

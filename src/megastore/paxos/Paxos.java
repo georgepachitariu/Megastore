@@ -1,66 +1,107 @@
 package megastore.paxos;
 
-import java.io.IOException;
-import java.net.InetSocketAddress;
-import java.nio.ByteBuffer;
-import java.nio.channels.SocketChannel;
+import megastore.paxos.message.NullMessage;
+import megastore.paxos.message.PrepareRequest;
+
+import java.util.Collections;
+import java.util.LinkedList;
 import java.util.List;
 
 public class Paxos {
     private List<String> nodesURL;
     private ListeningThread listeningThread;
+    private PrepareRequest highestPrepReqAnswered;
+    private List<String> proposalAcceptorsList;
 
     public Paxos(String port, List<String> nodesURL) {
         // a listeningThread that is listening for proposals or accept proposals
-        listeningThread =new ListeningThread(port);
+        listeningThread = new ListeningThread(this, port);
         Thread runThread = new Thread(this.listeningThread);
-        runThread .setDaemon(false);
-        runThread .start();
+        runThread.setDaemon(false);
+        runThread.start();
 
         this.nodesURL = nodesURL;
+        Collections.sort(this.nodesURL);
+        proposalAcceptorsList=new LinkedList<String>();
     }
 
-    public Paxos(String port, List<String> nodesURL, ListeningThread thread) {
-        Thread runThread  = new Thread(thread);
-        runThread .setDaemon(false);
-        runThread .start();
+    public Paxos(List<String> nodesURL, ListeningThread thread) {
+        Thread runThread = new Thread(thread);
+        runThread.setDaemon(false);
+        runThread.start();
 
         this.listeningThread = thread;
         this.nodesURL = nodesURL;
+        Collections.sort(this.nodesURL);
+        proposalAcceptorsList=new LinkedList<String>();
     }
 
     // to be called by megastore after a write operation
     // has been made local
-    public void proposeValue(Object value) {
+    public void sendPrepareRequests(Object value) {
         // Phase 1. (a) A proposer selects a proposal number n and sends a prepare
         // request with number n to a majority of acceptors.
-        for(String s : nodesURL)
-            if(! listeningThread.getCurrentUrl().equals( s ))
-                sendMessage(s,
-                        new Proposal(listeningThread.getCurrentUrl(),  1,   value). toString()
-                );
+        for (String destinationURL : nodesURL)
+            if (!listeningThread.getCurrentUrl().equals(destinationURL)) {
+                new PrepareRequest(this, listeningThread.getCurrentUrl(), destinationURL,
+                        getPaxosRound(value.toString()), getProposalNumber(), value).send();
+            }
     }
 
-    public void sendMessage(String nodeUrl, String message) {
-        try {
-            SocketChannel socketChannel = SocketChannel.open();
-            socketChannel.configureBlocking(true);
-            socketChannel.connect(new InetSocketAddress(nodeUrl.split(":")[0],
-                    Integer.parseInt(nodeUrl.split(":")[1])
-            ));
+//    Phase 2. (a) If the proposer receives a response to its prepare requests
+//            (numbered n) from a majority of acceptors, then it sends an accept request to
+//    each of those acceptors for a proposal numbered n with a value v, where v is the
+//    value of the highest-numbered proposal among the responses, or is any value if
+//    the responses reported no proposals.
+    public void sendAcceptRequests(Object value) {
 
+    }
 
-            ByteBuffer buf = ByteBuffer.allocate(1000);
-            buf.clear();
-            buf.put(message.getBytes());
+    private int getPaxosRound(String objValue) {
+        PrepareRequest prop = highestPrepReqAnswered;
+        if(prop==null)
+            return 1;
+        return prop.paxosRound + 1;
+    }
 
-            buf.flip();
+    private int getProposalNumber() {
+        int k=-1;
+        for(int i=0; i<nodesURL.size(); i++)
+            if(nodesURL.get(i).equals(listeningThread.getCurrentUrl()))
+                k=i;
 
-            while (buf.hasRemaining()) {
-                socketChannel.write(buf);
-            }
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+        if(highestPrepReqAnswered ==null)
+            return nodesURL.size() + k;
+        int prevRoundNr= highestPrepReqAnswered.paxosRound;
+        return (prevRoundNr + 1) * nodesURL.size() +k;
+    }
+
+    public void addNodeAsAcceptorOfProposal(String acceptorUrl) {
+        proposalAcceptorsList.add(acceptorUrl);
+    }
+
+    public void setHighestPrepReqAnswered(PrepareRequest highestPrepReqAnswered) {
+        this.highestPrepReqAnswered = highestPrepReqAnswered;
+    }
+
+    public PrepareRequest getHighestPrepReqAnswered() {
+        return highestPrepReqAnswered;
+    }
+
+    public String getCurrentUrl() {
+        return listeningThread.getCurrentUrl();
+    }
+
+    public List<String> getProposalAcceptorsList() {
+        return proposalAcceptorsList;
+    }
+
+    public void setProposalNumber(int number) {
+        highestPrepReqAnswered.proposalNumber=number;
+    }
+
+    public void close() {
+        listeningThread.stopThread();
+        new NullMessage(null,listeningThread.getCurrentUrl()).send();
     }
 }
