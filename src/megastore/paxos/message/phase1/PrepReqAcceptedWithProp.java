@@ -19,7 +19,8 @@ public class PrepReqAcceptedWithProp extends Message {
         String source = messageParts[1];
         Proposal prop = new Proposal(messageParts[2]);
 
-        if(paxos.proposer.getHighestPropAcc().pNumber < prop.pNumber ) {
+        Proposal oldP = paxos.proposer.getHighestPropAcc();
+        if(oldP==null || oldP.pNumber < prop.pNumber ) {
             paxos.proposer.setHighestPropAcc( prop );
         }
 

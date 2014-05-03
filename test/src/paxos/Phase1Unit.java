@@ -41,7 +41,7 @@ public class Phase1Unit {
         runThread .setDaemon(false);
         runThread .start();
 
-        p1.proposer.sendPrepareRequests(new Integer(7));
+        p1.proposer.sendPrepareRequests();
 
         Thread.sleep(100);
         verify(mockedPrepareRequest).act("PrepareRequest,192.168.1.100:61616,2".split(","));
@@ -65,7 +65,7 @@ public class Phase1Unit {
         Paxos p1=new Paxos("61616", list);
         Paxos p2=new Paxos("61617", list);
 
-        p1.proposer.sendPrepareRequests(new Integer(7));
+        p1.proposer.sendPrepareRequests();
 
         Thread.sleep(100);
         List<String> result = p1.proposer.getProposalAcceptorsList();
@@ -85,12 +85,12 @@ public class Phase1Unit {
         Paxos p1=new Paxos("61616", list);
         Paxos p2=new Paxos("61617", list);
 
-        p1.proposer.sendPrepareRequests(new Integer(9));
+        p1.proposer.sendPrepareRequests();
 
         while(p1.proposer.getHighestAcceptedNumber() == -1)
             Thread.sleep(100);
 
-        p1.proposer.sendPrepareRequests(new Integer(6));
+        p1.proposer.sendPrepareRequests();
 
         while(p1.proposer.getHighestAcceptedNumber()<3)
             Thread.sleep(100);
@@ -102,7 +102,7 @@ public class Phase1Unit {
     }
 
     @Test
-    public void functionalityTest_FirstRound() throws InterruptedException {
+    public void sendingAProposalAndGetAllResponses() throws InterruptedException {
         String n1="192.168.1.100:61616";
         String n2="192.168.1.100:61617";
         String n3="192.168.1.100:61618";
@@ -115,12 +115,10 @@ public class Phase1Unit {
         Paxos p2=new Paxos("61617", list);
         Paxos p3=new Paxos("61618", list);
 
+        p3.proposer.sendPrepareRequests();
 
-        p3.proposer.sendPrepareRequests(new Integer(9));
-        p2.proposer.sendPrepareRequests(new Integer(4));
-        p1.proposer.sendPrepareRequests(new Integer(2));
-
-        Thread.sleep(1000);
+        Thread.sleep(100);
+        Assert.assertTrue(p3.proposer.getProposalAcceptorsList().size() == 2);
 
         p1.close();
         p2.close();

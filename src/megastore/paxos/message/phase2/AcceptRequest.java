@@ -19,7 +19,20 @@ public class AcceptRequest extends Message {
 
     @Override
     public void act(String[] messageParts) {
+        //    (b) If an acceptor receives an accept request for a proposal numbered n,
+        Proposal prop = new Proposal( messageParts[1] );
+        String source= messageParts[2];
 
+        // unless it has already responded to a prepare request having a number greater than n.
+        if(paxos.acceptor.getHighestPropNumberAcc() <=  prop.pNumber) {
+            // it accepts the proposal
+            paxos.acceptor.setHighestPropAcc(prop);
+            new AR_Accepted(paxos, paxos.getCurrentUrl(), source,  prop.pNumber).send();
+        }
+        else {
+            // it sends a denial message
+            new AR_Rejected(paxos, paxos.getCurrentUrl(), source,  prop.pNumber).send();
+        }
     }
 
     @Override
