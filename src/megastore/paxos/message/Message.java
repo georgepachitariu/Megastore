@@ -18,7 +18,7 @@ public abstract class Message {
 
     protected Message(Paxos paxos, String destinationURL) {
         this.destinationURL=destinationURL;
-        this.paxos=paxos;
+        this.paxos = paxos;
     }
 
     public void send() {

@@ -1,6 +1,11 @@
 package megastore.paxos;
 
 import megastore.paxos.message.*;
+import megastore.paxos.message.phase1.PrepReqAccepted;
+import megastore.paxos.message.phase1.PrepReqAcceptedWithProp;
+import megastore.paxos.message.phase1.PrepReqRejected;
+import megastore.paxos.message.phase1.PrepareRequest;
+import megastore.paxos.message.phase2.AcceptRequest;
 
 import java.io.IOException;
 import java.net.InetAddress;
@@ -31,14 +36,16 @@ public class ListeningThread  implements Runnable  {
             e.printStackTrace();
         }
 
-        this.paxos=paxos;
+        this.paxos = paxos;
         isAlive=true;
         this.port=port;
 
         knownMessageTypes=new LinkedList();
-        knownMessageTypes.add(new PrepareRequest(paxos,null,null,0,0,null));
-        knownMessageTypes.add(new PrepReqAccepted(paxos,null,null,0, null));
-        knownMessageTypes.add(new PrepReqRejected(null,null,null,0));
+        knownMessageTypes.add(new PrepareRequest(paxos,null,null,-1));
+        knownMessageTypes.add(new PrepReqAccepted(paxos,null,null,-1));
+        knownMessageTypes.add(new PrepReqAcceptedWithProp(paxos,null,null,null));
+        knownMessageTypes.add(new PrepReqRejected(paxos,null,null,0));
+        knownMessageTypes.add(new AcceptRequest(paxos,null,null,null));
         knownMessageTypes.add(new NullMessage(null,null));
     }
 

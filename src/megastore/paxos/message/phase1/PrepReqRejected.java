@@ -1,13 +1,14 @@
-package megastore.paxos.message;
+package megastore.paxos.message.phase1;
 
 import megastore.paxos.Paxos;
+import megastore.paxos.message.Message;
 
 /**
  * Created by George on 02/05/2014.
  */
 public class PrepReqRejected extends Message {
-    public String sourceURL;
-    public int proposalNumber;
+    private String sourceURL;
+    private int proposalNumber;
 
     public PrepReqRejected(Paxos paxos, String source, String destination, int proposalNumber) {
         super(paxos, destination);
@@ -17,7 +18,7 @@ public class PrepReqRejected extends Message {
 
     @Override
     public void act(String[] messageParts) {
-        System.out.println("Got REJECTEEEED");
+        System.out.println( "Got REJECTEEEED from " + messageParts[1]);
     }
 
     @Override

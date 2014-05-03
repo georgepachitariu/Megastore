@@ -2,7 +2,7 @@ package paxos;
 
 import megastore.paxos.ListeningThread;
 import megastore.paxos.Paxos;
-import megastore.paxos.message.PrepareRequest;
+import megastore.paxos.message.phase1.PrepareRequest;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -41,10 +41,10 @@ public class Phase1Unit {
         runThread .setDaemon(false);
         runThread .start();
 
-        p1.sendPrepareRequests(new Integer(7));
+        p1.proposer.sendPrepareRequests(new Integer(7));
 
         Thread.sleep(100);
-        verify(mockedPrepareRequest).act("PrepareRequest,1,2,192.168.1.100:61616,7".split(","));
+        verify(mockedPrepareRequest).act("PrepareRequest,192.168.1.100:61616,2".split(","));
         listeningThread.stopThread();
         p1.close();
     }
@@ -65,10 +65,10 @@ public class Phase1Unit {
         Paxos p1=new Paxos("61616", list);
         Paxos p2=new Paxos("61617", list);
 
-        p1.sendPrepareRequests(new Integer(7));
+        p1.proposer.sendPrepareRequests(new Integer(7));
 
         Thread.sleep(100);
-        List<String> result = p1.getProposalAcceptorsList();
+        List<String> result = p1.proposer.getProposalAcceptorsList();
         Assert.assertTrue(result.size() == 1 && result.get(0).equals("192.168.1.100:61617"));
         p1.close();
         p2.close();
@@ -85,19 +85,17 @@ public class Phase1Unit {
         Paxos p1=new Paxos("61616", list);
         Paxos p2=new Paxos("61617", list);
 
-        p1.sendPrepareRequests(new Integer(7));
+        p1.proposer.sendPrepareRequests(new Integer(9));
 
-        while(p1.getHighestPrepReqAnswered() == null)
+        while(p1.proposer.getHighestAcceptedNumber() == -1)
             Thread.sleep(100);
 
-        p1.sendPrepareRequests(new Integer(5));
+        p1.proposer.sendPrepareRequests(new Integer(6));
 
-        while(p1.getHighestPrepReqAnswered().paxosRound != 2)
+        while(p1.proposer.getHighestAcceptedNumber()<3)
             Thread.sleep(100);
 
-        PrepareRequest proposal = p2.getHighestPrepReqAnswered();
-        Assert.assertTrue(proposal.value.equals("7"));
-        Assert.assertTrue(proposal.proposalNumber==4);
+        Assert.assertTrue(p2.acceptor.getHighestPropNumberAcc()==4);
 
         p1.close();
         p2.close();
@@ -118,12 +116,11 @@ public class Phase1Unit {
         Paxos p3=new Paxos("61618", list);
 
 
-        p1.sendPrepareRequests(new Integer(2));
-        p3.sendPrepareRequests(new Integer(9));
-        p2.sendPrepareRequests(new Integer(4));
+        p3.proposer.sendPrepareRequests(new Integer(9));
+        p2.proposer.sendPrepareRequests(new Integer(4));
+        p1.proposer.sendPrepareRequests(new Integer(2));
 
-        while(p2.getProposalAcceptorsList().size() <2 )
-            Thread.sleep(100);
+        Thread.sleep(1000);
 
         p1.close();
         p2.close();
