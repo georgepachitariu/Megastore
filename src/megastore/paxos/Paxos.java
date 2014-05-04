@@ -4,14 +4,20 @@ import megastore.paxos.message.NullMessage;
 
 import java.util.List;
 
-public class Paxos {
+public class Paxos implements Runnable {
     private ListeningThread listeningThread;
     public PaxosAcceptor acceptor;
     public PaxosProposer proposer;
+    private Object value;
+    private Object finalValue; // in the end this value must be the same on all nodes
 
+    private boolean acceptRequestsDidNotSucceded;
+    private boolean prepareRequestsDidNotSucceed;
 
-    public Paxos(String port, List<String> nodesURL) {
+    public Paxos(String port, List<String> nodesURL, Object obj) {
         constructorExtension(nodesURL, new ListeningThread(this, port));
+        this.value=obj;
+        finalValue=null;
     }
 
     public Paxos(List<String> nodesURL, ListeningThread thread) {
@@ -29,39 +35,51 @@ public class Paxos {
         this.proposer =new PaxosProposer(this, nodesURL);
     }
 
-    public boolean proposeValue(Object obj) {
-        try {
-            // Phase 1
-            proposer.sendPrepareRequests();
+    @Override
+    public void run() {
+        do {
+            acceptRequestsDidNotSucceded = false;
+            prepareRequestsDidNotSucceed = false;
+            try {
+                // Phase 1
+                proposer.sendPrepareRequests();
 
-            int nrOfAcceptors, allParticipants;
-            do {
-                Thread.sleep(10); // we wait for the proposal acceptance messages to come;
-                nrOfAcceptors = proposer.getProposalAcceptorsList().size();
-                allParticipants = proposer.getNodesURL().size();
-            } while(nrOfAcceptors +1 <= allParticipants/2);
+                int nrOfAcceptors, allParticipants;
+                do {
+                    Thread.sleep(10); // we wait for the proposal acceptance messages to come;
+                    nrOfAcceptors = proposer.getProposalAcceptorsList().size();
+                    allParticipants = proposer.getNodesURL().size();
+                    if(prepareRequestsDidNotSucceed)
+                        break;   // we break from this round and start again
+                    //    } while(nrOfAcceptors +1 <= allParticipants/2); //production code
+                } while (nrOfAcceptors + 1 < allParticipants);// my test code
 
-            // Phase 2
-            boolean result=proposer.isOurValueProposed(obj);
-            // we save if the value for which the Paxos will achieve consensus is
-            // our value or another one. Even if it's not ours, we continue because
-            // we want to achieve consensus an all the nodes.
+                // Phase 2
+                boolean result = proposer.isOurValueProposed(value);
+                // we save if the value for which the Paxos will achieve consensus is
+                // our value or another one. Even if it's not ours, we continue because
+                // we want to achieve consensus an all the nodes.
 
-            proposer.sendAcceptRequests(obj);
+                proposer.sendAcceptRequests(value);
 
-            do {
-                Thread.sleep(10); // we wait for the value acceptance messages to come;
-                nrOfAcceptors = proposer.getValueAcceptorsList().size();
-                allParticipants = proposer.getNodesURL().size();
-            } while(nrOfAcceptors +1 <= allParticipants/2);
+                do {
+                    Thread.sleep(10); // we wait for the value acceptance messages to come;
+                    nrOfAcceptors = proposer.getValueAcceptorsList().size();
+                    allParticipants = proposer.getNodesURL().size();
+                    if(acceptRequestsDidNotSucceded ||
+                            prepareRequestsDidNotSucceed)
+                        break;   // we break from this round and start again
+                    //   } while(nrOfAcceptors +1 <= allParticipants/2); //production code
+                } while (nrOfAcceptors + 1 < allParticipants);// my test code
 
-            //great. Consensus was achieved on a majority of nodes.
-            return result;
+                //great. Consensus was achieved on a majority of nodes.
+                finalValue = proposer.getHighestPropAcc().value;
 
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
-        return false;
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        } while(acceptRequestsDidNotSucceded ||
+                        prepareRequestsDidNotSucceed);
     }
 
     public String getCurrentUrl() {
@@ -71,5 +89,30 @@ public class Paxos {
     public void close() {
         listeningThread.stopThread();
         new NullMessage(null,listeningThread.getCurrentUrl()).send();
+    }
+
+    public void setFinalValue(Object value) {
+        this.finalValue = value;
+    }
+
+    public Object getFinalValue() {
+        return finalValue;
+    }
+
+    public void setValue(Object value) {
+        this.value = value;
+    }
+
+    public void cleanUp() {
+        value=null;
+        proposer.cleanUp();
+        acceptor.cleanUp();
+    }
+
+    public void acceptRequestsDidNotSucceded() {
+        acceptRequestsDidNotSucceded = true;
+    }
+    public void prepareRequestsDidNotSucceded() {
+        prepareRequestsDidNotSucceed = true;
     }
 }

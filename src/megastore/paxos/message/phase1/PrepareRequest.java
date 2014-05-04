@@ -23,7 +23,7 @@ public class PrepareRequest extends Message {
         Proposal highestPropAcc = paxos.acceptor.getHighestPropAcc();
         int highestPropNumberAcc = paxos.acceptor.getHighestPropNumberAcc();
 
-        if(highestPropNumberAcc < propNumber) {
+        if(highestPropNumberAcc <= propNumber) {
             //promise not to accept any more proposals numbered less than n
             paxos.acceptor.setHighestPropNumberAcc(propNumber);
 

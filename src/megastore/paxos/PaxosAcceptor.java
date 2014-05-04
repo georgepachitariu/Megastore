@@ -28,4 +28,8 @@ public class PaxosAcceptor {
         return highestPropNumberAcc;
     }
 
+    public void cleanUp() {
+        highestPropAcc=null;
+        highestPropNumberAcc=-1;
+    }
 }

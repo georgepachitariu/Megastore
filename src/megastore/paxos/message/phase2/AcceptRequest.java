@@ -27,8 +27,9 @@ public class AcceptRequest extends Message {
         if(paxos.acceptor.getHighestPropNumberAcc() <=  prop.pNumber) {
             // it accepts the proposal
             paxos.acceptor.setHighestPropAcc(prop);
+            paxos.setFinalValue(prop.value); //we also set the final value
             new AR_Accepted(paxos, paxos.getCurrentUrl(), source,  prop.pNumber).send();
-        }
+       }
         else {
             // it sends a denial message
             new AR_Rejected(paxos, paxos.getCurrentUrl(), source,  prop.pNumber).send();

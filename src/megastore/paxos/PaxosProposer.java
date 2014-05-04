@@ -28,6 +28,7 @@ public class PaxosProposer {
         valueAcceptorsList=new LinkedList<String>();
         this.paxos=paxos;
         highestAcceptedNumber =-1;
+        highestPropAcc=null;
     }
 
     // to be called by megastore after a write operation
@@ -42,13 +43,13 @@ public class PaxosProposer {
             }
     }
 
-//    Phase 2. (a) If the proposer receives a response to its prepare requests
+    //    Phase 2. (a) If the proposer receives a response to its prepare requests
 //    (numbered n) from a majority of acceptors, then it sends an accept request to
 //    each of those acceptors for a proposal numbered n with a value v, where v is the
 //    value of the highest-numbered proposal among the responses, or is any value if
 //    the responses reported no proposals.
     public void sendAcceptRequests(Object value) {
-  //      boolean operationResult;
+        //      boolean operationResult;
         if(highestPropAcc==null) {
             highestPropAcc=new Proposal(value, highestAcceptedNumber);
         }
@@ -81,7 +82,8 @@ public class PaxosProposer {
     }
 
     public void addNodeAsAcceptorOfProposal(String acceptorUrl) {
-        proposalAcceptorsList.add(acceptorUrl);
+        if(! proposalAcceptorsList.contains(acceptorUrl))
+            proposalAcceptorsList.add(acceptorUrl);
     }
 
     public List<String> getProposalAcceptorsList() {
@@ -114,5 +116,17 @@ public class PaxosProposer {
 
     public List<String> getNodesURL() {
         return nodesURL;
+    }
+
+    public void cleanUp() {
+        proposalAcceptorsList=new LinkedList<String>();
+        valueAcceptorsList=new LinkedList<String>();
+        highestPropAcc=null;
+        highestAcceptedNumber=-1;
+    }
+
+    public void cleanProposalAcceptorsList() {
+        proposalAcceptorsList=new LinkedList<String>();
+        valueAcceptorsList=new LinkedList<String>();
     }
 }
