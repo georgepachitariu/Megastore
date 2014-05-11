@@ -1,6 +1,8 @@
-package megastore.paxos;
+package megastore.paxos.acceptor;
 
-import megastore.paxos.message.*;
+import megastore.paxos.Paxos;
+import megastore.paxos.message.Message;
+import megastore.paxos.message.NullMessage;
 import megastore.paxos.message.phase1.PrepReqAccepted;
 import megastore.paxos.message.phase1.PrepReqAcceptedWithProp;
 import megastore.paxos.message.phase1.PrepReqRejected;
@@ -44,7 +46,7 @@ public class ListeningThread  implements Runnable  {
 
         knownMessageTypes=new LinkedList();
         knownMessageTypes.add(new PrepareRequest(paxos,null,null,-1));
-        knownMessageTypes.add(new PrepReqAccepted(paxos,null,null,-1));
+        knownMessageTypes.add(new PrepReqAccepted(paxos,null,null));
         knownMessageTypes.add(new PrepReqAcceptedWithProp(paxos,null,null,null));
         knownMessageTypes.add(new PrepReqRejected(paxos,null,null,-1));
         knownMessageTypes.add(new AcceptRequest(paxos,null,null,null));
@@ -60,35 +62,45 @@ public class ListeningThread  implements Runnable  {
 
     @Override
     public void run() {
-        try {
+        SocketChannel socketChannel=null;
+
             while (isAlive) {
-                SocketChannel socketChannel= serverSocketChannel.accept();
-                socketChannel.configureBlocking(true);
+                try {
+                    socketChannel = serverSocketChannel.accept();
+                    socketChannel.configureBlocking(true);
 
-                ByteBuffer buffer=ByteBuffer.allocate(1024);
-                int size=socketChannel.read(buffer);
+                    ByteBuffer buffer = ByteBuffer.allocate(1024);
+                    int size = socketChannel.read(buffer);
+                    if (size <= 0)
+                        continue;
 
-                socketChannel.close();
+                    buffer.flip();
+                    byte[] b = new byte[size];
+                    buffer.get(b);
+                    String message = new String(b);
 
-                buffer.flip();
-                byte[] b=new byte[size];
-                buffer.get(b);
-                String message = new String (b);
+                    String[] parts = message.split(",");
 
-                String[] parts = message.split(",");
+                    boolean recognized = false;
+                    for (Message m : knownMessageTypes)
+                        if (m.getID().equals(parts[0])) {
+                            m.act(parts);
+                            recognized = true;
+                        }
+                    if (recognized == false)
+                        System.out.println("Network Message Not Recognized");
 
-                boolean recognized=false;
-                for(Message m : knownMessageTypes)
-                    if(m.getID().equals(parts[0])) {
-                        m.act(parts);
-                        recognized=true;
+                } catch (IOException e) {
+                    e.printStackTrace();
+                } finally {
+                    try {
+                        socketChannel.finishConnect();
+                        socketChannel.close();
+                    } catch (IOException e) {
+                        e.printStackTrace();
                     }
-                if(recognized==false)
-                    System.out.println("Network Message Not Recognized");
+                }
             }
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
     }
 
     public void stopThread() {
@@ -102,5 +114,9 @@ public class ListeningThread  implements Runnable  {
             e.printStackTrace();
         }
         return null;
+    }
+
+    public List<Message> getKnownMessageTypes() {
+        return knownMessageTypes;
     }
 }

@@ -1,7 +1,7 @@
 package megastore.paxos.message.phase1;
 
 import megastore.paxos.Paxos;
-import megastore.paxos.Proposal;
+import megastore.paxos.proposer.Proposal;
 import megastore.paxos.message.Message;
 
 public class PrepareRequest extends Message {
@@ -30,14 +30,12 @@ public class PrepareRequest extends Message {
             // and with the highest-numbered proposal (if any) that it has accepted.
             // highestPropAcc may be null
             if(highestPropAcc != null) {
-                highestPropAcc.pNumber=propNumber;
                 new PrepReqAcceptedWithProp(paxos, paxos.getCurrentUrl(),
                         sourceL, highestPropAcc).send();
             }
             else {
-                new PrepReqAccepted(paxos, paxos.getCurrentUrl(),sourceL, propNumber).send();
+                new PrepReqAccepted(paxos, paxos.getCurrentUrl(),sourceL).send();
             }
-
         }
         else {
             new PrepReqRejected(paxos, paxos.getCurrentUrl(), sourceL, highestPropNumberAcc).send();

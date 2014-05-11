@@ -18,17 +18,10 @@ public class PrepReqRejected extends Message {
 
     @Override
     public void act(String[] messageParts) {
-        // we try again proposing but now we updated the proposal number that would work
         String source = messageParts[1];
         int number = Integer.parseInt( messageParts[2] );
 
-        paxos.proposer.cleanProposalAcceptorsList();
-        if(paxos.proposer.getHighestAcceptedNumber() < number)
-            paxos.proposer.setHighestAcceptedNumber(number);
-
-        // we update the proposal thread that at leas one accept proposal failed
-        // (so that he can start making prepare proposals again)
-        paxos.prepareRequestsDidNotSucceded();
+        paxos.proposer.increaseProposalRejectorsNr();
     }
 
     @Override

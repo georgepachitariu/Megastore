@@ -1,7 +1,7 @@
 /*
 package paxos;
 
-import megastore.paxos.ListeningThread;
+import megastore.paxos.acceptor.ListeningThread;
 import megastore.paxos.Paxos;
 import megastore.paxos.message.phase1.PrepareRequest;
 import org.junit.Assert;

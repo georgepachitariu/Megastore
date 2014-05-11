@@ -39,6 +39,13 @@ public abstract class Message {
             }
         } catch (IOException e) {
             e.printStackTrace();
+        }  finally {
+            try {
+                socketChannel.finishConnect();
+                socketChannel.close();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
         }
     }
 

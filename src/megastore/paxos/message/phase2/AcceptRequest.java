@@ -1,7 +1,7 @@
 package megastore.paxos.message.phase2;
 
 import megastore.paxos.Paxos;
-import megastore.paxos.Proposal;
+import megastore.paxos.proposer.Proposal;
 import megastore.paxos.message.Message;
 
 /**
@@ -27,6 +27,7 @@ public class AcceptRequest extends Message {
         if(paxos.acceptor.getHighestPropNumberAcc() <=  prop.pNumber) {
             // it accepts the proposal
             paxos.acceptor.setHighestPropAcc(prop);
+            paxos.acceptor.setHighestPropNumberAcc(prop.pNumber);
             paxos.setFinalValue(prop.value); //we also set the final value
             new AR_Accepted(paxos, paxos.getCurrentUrl(), source,  prop.pNumber).send();
        }

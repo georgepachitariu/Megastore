@@ -1,6 +1,9 @@
 package megastore.paxos;
 
 import megastore.paxos.message.NullMessage;
+import megastore.paxos.acceptor.ListeningThread;
+import megastore.paxos.acceptor.PaxosAcceptor;
+import megastore.paxos.proposer.PaxosProposer;
 
 import java.util.List;
 
@@ -10,9 +13,7 @@ public class Paxos implements Runnable {
     public PaxosProposer proposer;
     private Object value;
     private Object finalValue; // in the end this value must be the same on all nodes
-
-    private boolean acceptRequestsDidNotSucceded;
-    private boolean prepareRequestsDidNotSucceed;
+    boolean succeeded;
 
     public Paxos(String port, List<String> nodesURL, Object obj) {
         constructorExtension(nodesURL, new ListeningThread(this, port));
@@ -37,21 +38,23 @@ public class Paxos implements Runnable {
 
     @Override
     public void run() {
-        do {
-            acceptRequestsDidNotSucceded = false;
-            prepareRequestsDidNotSucceed = false;
+            succeeded = false;
             try {
                 // Phase 1
                 proposer.sendPrepareRequests();
 
-                int nrOfAcceptors, allParticipants;
+                int nrOfAcceptors, nrOfRejectors, allParticipants;
                 do {
                     Thread.sleep(10); // we wait for the proposal acceptance messages to come;
                     nrOfAcceptors = proposer.getProposalAcceptorsList().size();
+                    nrOfRejectors= proposer.getProposalRejectorsNr();
                     allParticipants = proposer.getNodesURL().size();
-                    if(prepareRequestsDidNotSucceed)
-                        break;   // we break from this round and start again
-                    //    } while(nrOfAcceptors +1 <= allParticipants/2); //production code
+
+                 //   if(nrOfRejectors>=(allParticipants+1)/2) //prod code
+                      if(nrOfRejectors>0) //test code
+                            return; // we will never have a majority so we return;
+
+      //               } while(nrOfAcceptors +1 <= allParticipants/2); //production code
                 } while (nrOfAcceptors + 1 < allParticipants);// my test code
 
                 // Phase 2
@@ -65,21 +68,22 @@ public class Paxos implements Runnable {
                 do {
                     Thread.sleep(10); // we wait for the value acceptance messages to come;
                     nrOfAcceptors = proposer.getValueAcceptorsList().size();
+                    nrOfRejectors= proposer.getValueRejectorsNr();
                     allParticipants = proposer.getNodesURL().size();
-                    if(acceptRequestsDidNotSucceded ||
-                            prepareRequestsDidNotSucceed)
-                        break;   // we break from this round and start again
-                    //   } while(nrOfAcceptors +1 <= allParticipants/2); //production code
+
+              //      if(nrOfRejectors>=(allParticipants+1)/2) // prod code
+                    if(nrOfRejectors>0)  // test code
+                         return; // we will never have a majority so we return;
+
+              //    } while(nrOfAcceptors +1 <= allParticipants/2); //production code
                 } while (nrOfAcceptors + 1 < allParticipants);// my test code
 
                 //great. Consensus was achieved on a majority of nodes.
                 finalValue = proposer.getHighestPropAcc().value;
-
+                succeeded=true;
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
-        } while(acceptRequestsDidNotSucceded ||
-                        prepareRequestsDidNotSucceed);
     }
 
     public String getCurrentUrl() {
@@ -105,14 +109,12 @@ public class Paxos implements Runnable {
 
     public void cleanUp() {
         value=null;
+        finalValue=null;
         proposer.cleanUp();
         acceptor.cleanUp();
     }
 
-    public void acceptRequestsDidNotSucceded() {
-        acceptRequestsDidNotSucceded = true;
-    }
-    public void prepareRequestsDidNotSucceded() {
-        prepareRequestsDidNotSucceed = true;
+    public boolean succeeded() {
+        return succeeded;
     }
 }

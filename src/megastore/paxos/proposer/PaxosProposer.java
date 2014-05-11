@@ -1,5 +1,6 @@
-package megastore.paxos;
+package megastore.paxos.proposer;
 
+import megastore.paxos.Paxos;
 import megastore.paxos.message.phase1.PrepareRequest;
 import megastore.paxos.message.phase2.AcceptRequest;
 
@@ -14,11 +15,16 @@ public class PaxosProposer {
     private final Paxos paxos;
     private final List<String> nodesURL;
 
+    private Object propAccListLock=new Object();
     private List<String> proposalAcceptorsList;
+    private int proposalRejectorsNr;
+
+    private Object valueAccListLock=new Object();
     private List<String> valueAcceptorsList;
 
     private Proposal highestPropAcc;
-    private int highestAcceptedNumber;
+    private int proposalNumber;
+    private int valueRejectorsNr;
 
 
     public PaxosProposer(Paxos paxos, List<String> nodesURL) {
@@ -27,8 +33,10 @@ public class PaxosProposer {
         proposalAcceptorsList=new LinkedList<String>();
         valueAcceptorsList=new LinkedList<String>();
         this.paxos=paxos;
-        highestAcceptedNumber =-1;
+        proposalNumber =-1;
         highestPropAcc=null;
+        proposalRejectorsNr=0;
+        valueRejectorsNr=0;
     }
 
     // to be called by megastore after a write operation
@@ -36,10 +44,12 @@ public class PaxosProposer {
     public void sendPrepareRequests() {
         // Phase 1. (a) A proposer selects a proposal number n and sends a prepare
         // request with number n to a majority of acceptors.
+        computeProposalNumber();
+
         for (String destinationURL : nodesURL)
             if (!paxos.getCurrentUrl().equals(destinationURL)) {
                 new PrepareRequest(paxos, paxos.getCurrentUrl(),
-                        destinationURL,getProposalNumber()).send();
+                        destinationURL,proposalNumber).send();
             }
     }
 
@@ -51,16 +61,20 @@ public class PaxosProposer {
     public void sendAcceptRequests(Object value) {
         //      boolean operationResult;
         if(highestPropAcc==null) {
-            highestPropAcc=new Proposal(value, highestAcceptedNumber);
+            highestPropAcc=new Proposal(value, proposalNumber);
         }
         else {
+           if( highestPropAcc.pNumber< proposalNumber)
+               highestPropAcc.pNumber= proposalNumber;
 //            operationResult=false;
             // because even if we succeed, we don't insert the expected value
             // but another one
         }
 
-        for(String url : proposalAcceptorsList) {
-            new AcceptRequest(paxos, paxos.getCurrentUrl() , url, highestPropAcc ).send();
+        synchronized (propAccListLock) {
+            for (String url : proposalAcceptorsList) {
+                new AcceptRequest(paxos, paxos.getCurrentUrl(), url, highestPropAcc).send();
+            }
         }
     }
 
@@ -68,34 +82,39 @@ public class PaxosProposer {
         return (highestPropAcc==null);
     }
 
-    private int getProposalNumber() {
+    private void computeProposalNumber() {
         int k=-1;
         for(int i=0; i<nodesURL.size(); i++)
             if(nodesURL.get(i).equals(paxos.getCurrentUrl()))
                 k=i;
 
-        if(highestAcceptedNumber == -1)
-            return nodesURL.size() + k;
+        // we get the biggest proposal number this node has seen
+        int max =  paxos.acceptor.getHighestPropNumberAcc();
+        if(max == -1)
+            proposalNumber = nodesURL.size() + k;
+        else {
+            for( ; k<= max; k+=nodesURL.size());
+            proposalNumber=k;
 
-        for( ; k<= highestAcceptedNumber; k+=nodesURL.size());
-        return k;
+        }
     }
 
     public void addNodeAsAcceptorOfProposal(String acceptorUrl) {
-        if(! proposalAcceptorsList.contains(acceptorUrl))
-            proposalAcceptorsList.add(acceptorUrl);
+        if(! proposalAcceptorsList.contains(acceptorUrl)) {
+            synchronized (propAccListLock) {
+                proposalAcceptorsList.add(acceptorUrl);
+            }
+        }
     }
 
     public List<String> getProposalAcceptorsList() {
-        return proposalAcceptorsList;
+        synchronized (propAccListLock) {
+            return proposalAcceptorsList;
+        }
     }
 
-    public void setHighestAcceptedNumber(int highestAcceptedNumber) {
-        this.highestAcceptedNumber = highestAcceptedNumber;
-    }
-
-    public int getHighestAcceptedNumber() {
-        return highestAcceptedNumber;
+    public int getProposalNumber() {
+        return proposalNumber;
     }
 
     public void setHighestPropAcc(Proposal highestPropAcc) {
@@ -107,26 +126,48 @@ public class PaxosProposer {
     }
 
     public List<String> getValueAcceptorsList() {
-        return valueAcceptorsList;
+        synchronized (valueAccListLock) {
+            return valueAcceptorsList;
+        }
     }
 
     public void addToValueAcceptorsList(String acceptorURL) {
-        this.valueAcceptorsList.add(acceptorURL);
+        synchronized (valueAccListLock) {
+            this.valueAcceptorsList.add(acceptorURL);
+        }
     }
 
     public List<String> getNodesURL() {
         return nodesURL;
     }
 
+    public int getProposalRejectorsNr() {
+        return proposalRejectorsNr;
+    }
+
+    public void increaseProposalRejectorsNr() {
+        proposalRejectorsNr++;
+    }
+
     public void cleanUp() {
         proposalAcceptorsList=new LinkedList<String>();
         valueAcceptorsList=new LinkedList<String>();
         highestPropAcc=null;
-        highestAcceptedNumber=-1;
+        proposalNumber =-1;
+        proposalRejectorsNr=0;
+        valueRejectorsNr=0;
     }
 
     public void cleanProposalAcceptorsList() {
         proposalAcceptorsList=new LinkedList<String>();
         valueAcceptorsList=new LinkedList<String>();
+    }
+
+    public void increaseValueRejectorsNr() {
+        valueRejectorsNr++;
+    }
+
+    public int getValueRejectorsNr() {
+        return valueRejectorsNr;
     }
 }

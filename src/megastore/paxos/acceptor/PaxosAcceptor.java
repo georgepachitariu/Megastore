@@ -1,4 +1,6 @@
-package megastore.paxos;
+package megastore.paxos.acceptor;
+
+import megastore.paxos.proposer.Proposal;
 
 /**
  * Created by George on 03/05/2014.
@@ -12,7 +14,7 @@ public class PaxosAcceptor {
         highestPropNumberAcc=-1;
     }
 
-    public void setHighestPropAcc(Proposal highestPropAcc) {
+    public synchronized void setHighestPropAcc(Proposal highestPropAcc) {
         this.highestPropAcc = highestPropAcc;
     }
 
@@ -20,7 +22,7 @@ public class PaxosAcceptor {
         return highestPropAcc;
     }
 
-    public void setHighestPropNumberAcc(int highestPropNumberAcc) {
+    public synchronized void setHighestPropNumberAcc(int highestPropNumberAcc) {
         this.highestPropNumberAcc = highestPropNumberAcc;
     }
 

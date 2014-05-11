@@ -1,7 +1,7 @@
 package megastore.paxos.message.phase1;
 
 import megastore.paxos.Paxos;
-import megastore.paxos.Proposal;
+import megastore.paxos.proposer.Proposal;
 import megastore.paxos.message.Message;
 
 public class PrepReqAcceptedWithProp extends Message {
@@ -25,8 +25,6 @@ public class PrepReqAcceptedWithProp extends Message {
         }
 
         paxos.proposer.addNodeAsAcceptorOfProposal(source);
-        if(paxos.proposer.getHighestAcceptedNumber() < prop.pNumber)
-            paxos.proposer.setHighestAcceptedNumber(prop.pNumber);
     }
 
     @Override

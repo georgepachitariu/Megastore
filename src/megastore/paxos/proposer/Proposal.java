@@ -1,4 +1,4 @@
-package megastore.paxos;
+package megastore.paxos.proposer;
 
 public class Proposal {
     public Object value;
