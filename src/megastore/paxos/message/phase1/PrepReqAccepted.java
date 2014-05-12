@@ -1,26 +1,26 @@
 package megastore.paxos.message.phase1;
 
-import megastore.paxos.Paxos;
-import megastore.paxos.message.Message;
+import megastore.paxos.message.PaxosAcceptorMessage;
+import megastore.paxos.proposer.PaxosProposer;
 
-public class PrepReqAccepted extends Message {
+public class PrepReqAccepted extends PaxosAcceptorMessage {
     private String sourceURL;
 
-    public PrepReqAccepted(Paxos paxos, String sourceURL, String destinationURL) {
-        super(paxos, destinationURL);
+    public PrepReqAccepted( long entityId, int cellNumber, PaxosProposer proposer, String sourceURL, String destinationURL) {
+        super(proposer, destinationURL,entityId,cellNumber);
         this.sourceURL=sourceURL;
     }
 
     @Override
     public void act(String[] messageParts) {
-        String source = messageParts[1];
+        String source = messageParts[3];
 
-        paxos.proposer.addNodeAsAcceptorOfProposal(source);
+        proposer.addNodeAsAcceptorOfProposal(source);
     }
 
     @Override
     protected String toMessage() {
-            return getID()+"," + sourceURL;
+            return super.toMessage() + getID()+"," + sourceURL;
     }
 
     @Override

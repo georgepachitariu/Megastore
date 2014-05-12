@@ -1,27 +1,27 @@
 package megastore.paxos.message.phase1;
 
-import megastore.paxos.Paxos;
-import megastore.paxos.message.Message;
+import megastore.paxos.message.PaxosAcceptorMessage;
+import megastore.paxos.proposer.PaxosProposer;
 
 /**
  * Created by George on 02/05/2014.
  */
-public class PrepReqRejected extends Message {
+public class PrepReqRejected extends PaxosAcceptorMessage {
     private String sourceURL;
     private int proposalNumber;
 
-    public PrepReqRejected(Paxos paxos, String source, String destination, int proposalNumber) {
-        super(paxos, destination);
+    public PrepReqRejected( long entityId, int cellNumber, PaxosProposer proposer, String source, String destination, int proposalNumber) {
+        super(proposer, destination,entityId,cellNumber);
         this.sourceURL=source;
         this.proposalNumber=proposalNumber;
     }
 
     @Override
     public void act(String[] messageParts) {
-        String source = messageParts[1];
-        int number = Integer.parseInt( messageParts[2] );
+        String source = messageParts[3];
+        int number = Integer.parseInt( messageParts[4] );
 
-        paxos.proposer.increaseProposalRejectorsNr();
+        proposer.increaseProposalRejectorsNr();
     }
 
     @Override
@@ -31,6 +31,6 @@ public class PrepReqRejected extends Message {
 
     @Override
     protected String toMessage() {
-        return getID()+"," + sourceURL+ "," + proposalNumber;
+        return super.toMessage() + getID()+"," + sourceURL+ "," + proposalNumber;
     }
 }

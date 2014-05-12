@@ -1,18 +1,19 @@
 package megastore.paxos.message.phase2;
 
-import megastore.paxos.Paxos;
+import megastore.network.NetworkManager;
+import megastore.paxos.message.PaxosProposerMessage;
 import megastore.paxos.proposer.Proposal;
-import megastore.paxos.message.Message;
 
 /**
  * Created by George on 02/05/2014.
  */
-public class AcceptRequest extends Message {
+public class AcceptRequest extends PaxosProposerMessage {
     private String sourceURL;
     private Proposal proposal;
 
-    public AcceptRequest(Paxos paxos, String sourceURL, String destinationURL, Proposal proposal) {
-        super(paxos, destinationURL);
+    public AcceptRequest( long entityId, int cellNumber, NetworkManager networkManager,
+                          String sourceURL, String destinationURL, Proposal proposal) {
+        super(networkManager,destinationURL,entityId,cellNumber);
         this.proposal =proposal;
         this.sourceURL=sourceURL;
     }
@@ -20,20 +21,23 @@ public class AcceptRequest extends Message {
     @Override
     public void act(String[] messageParts) {
         //    (b) If an acceptor receives an accept request for a proposal numbered n,
-        Proposal prop = new Proposal( messageParts[1] );
-        String source= messageParts[2];
+        entityId=Long.parseLong( messageParts[0] );
+        cellNumber=Integer.parseInt( messageParts[1] );
+
+        Proposal prop = new Proposal( messageParts[3] );
+        String source= messageParts[4];
 
         // unless it has already responded to a prepare request having a number greater than n.
-        if(paxos.acceptor.getHighestPropNumberAcc() <=  prop.pNumber) {
+        if(acceptor.getHighestPropNumberAcc() <=  prop.pNumber) {
             // it accepts the proposal
-            paxos.acceptor.setHighestPropAcc(prop);
-            paxos.acceptor.setHighestPropNumberAcc(prop.pNumber);
-            paxos.setFinalValue(prop.value); //we also set the final value
-            new AR_Accepted(paxos, paxos.getCurrentUrl(), source,  prop.pNumber).send();
+            acceptor.setHighestPropAcc(prop);
+            acceptor.setHighestPropNumberAcc(prop.pNumber);
+            networkManager.writeFinalValueOnLog(entityId, cellNumber, prop.value); //we also set the final value
+            new AR_Accepted(entityId, cellNumber, null, networkManager.getCurrentUrl(), source,  prop.pNumber).send();
        }
         else {
             // it sends a denial message
-            new AR_Rejected(paxos, paxos.getCurrentUrl(), source,  prop.pNumber).send();
+            new AR_Rejected(entityId, cellNumber,null, networkManager.getCurrentUrl(), source,  prop.pNumber).send();
         }
     }
 
@@ -44,6 +48,6 @@ public class AcceptRequest extends Message {
 
     @Override
     protected String toMessage() {
-        return getID()+ "," + proposal.toMessage() + "," + sourceURL;
+        return super.toMessage() + getID()+ "," + proposal.toMessage() + "," + sourceURL;
     }
 }

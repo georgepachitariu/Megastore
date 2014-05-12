@@ -1,27 +1,27 @@
 package megastore.paxos.message.phase2;
 
-import megastore.paxos.Paxos;
-import megastore.paxos.message.Message;
+import megastore.paxos.message.PaxosAcceptorMessage;
+import megastore.paxos.proposer.PaxosProposer;
 
 /**
  * Created by George on 03/05/2014.
  */
-public class AR_Rejected  extends Message {
+public class AR_Rejected  extends PaxosAcceptorMessage {
     private String source;
     private int pNumber;
 
-    public AR_Rejected(Paxos paxos, String source, String destination, int pNumber) {
-        super(paxos, destination);
+    public AR_Rejected( long entityId, int cellNumber, PaxosProposer proposer, String source, String destination, int pNumber) {
+        super(proposer, destination,entityId,cellNumber);
         this.source=source;
         this.pNumber=pNumber;
     }
 
     @Override
     public void act(String[] messageParts) {
-        String source = messageParts[2];
-        int number = Integer.parseInt( messageParts[1] );
+        String source = messageParts[4];
+        int number = Integer.parseInt( messageParts[3] );
 
-        paxos.proposer.increaseValueRejectorsNr();
+        proposer.increaseValueRejectorsNr();
     }
 
     @Override
@@ -31,6 +31,6 @@ public class AR_Rejected  extends Message {
 
     @Override
     protected String toMessage() {
-        return getID()+ "," + pNumber + "," + source;
+        return super.toMessage() + getID()+ "," + pNumber + "," + source;
     }
 }

@@ -1,18 +1,11 @@
 package paxos;
 
-import megastore.paxos.Paxos;
-import org.junit.Assert;
-import org.junit.Test;
-
-import java.util.LinkedList;
-import java.util.Queue;
-import java.util.Random;
-
 /**
  * Created by George on 03/05/2014.
  */
 public class PaxosTest {
 
+    /*
     @Test
     public void stressTestPaxos() throws InterruptedException {
         String url1="192.168.1.100:61616";
@@ -29,6 +22,11 @@ public class PaxosTest {
         Paxos p2=new Paxos("61617", list,"2");
         Paxos p3=new Paxos("61618", list,"3");
         Paxos p4=new Paxos("61619", list,"4");
+
+        p1.startThread();
+        p2.startThread();
+        p3.startThread();
+        p4.startThread();
 
         Queue<String> p1_list=getRandomList(75);
         Queue<String> p2_list=getRandomList(75);
@@ -124,5 +122,6 @@ public class PaxosTest {
             list.add(String.valueOf(nr));
         }
         return  list;
-    }
+    } */
 }
+

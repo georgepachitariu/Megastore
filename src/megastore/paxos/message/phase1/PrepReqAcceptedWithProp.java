@@ -1,35 +1,35 @@
 package megastore.paxos.message.phase1;
 
-import megastore.paxos.Paxos;
+import megastore.paxos.message.PaxosAcceptorMessage;
+import megastore.paxos.proposer.PaxosProposer;
 import megastore.paxos.proposer.Proposal;
-import megastore.paxos.message.Message;
 
-public class PrepReqAcceptedWithProp extends Message {
+public class PrepReqAcceptedWithProp extends PaxosAcceptorMessage {
     private Proposal proposal;
     private String sourceURL;
 
-    public PrepReqAcceptedWithProp(Paxos paxos, String sourceURL, String destinationURL, Proposal proposal) {
-        super(paxos, destinationURL);
+    public PrepReqAcceptedWithProp( long entityId, int cellNumber, PaxosProposer proposer, String sourceURL, String destinationURL, Proposal proposal) {
+        super(proposer, destinationURL,entityId,cellNumber);
         this.proposal=proposal;
         this.sourceURL=sourceURL;
     }
 
     @Override
     public void act(String[] messageParts) {
-        String source = messageParts[1];
-        Proposal prop = new Proposal(messageParts[2]);
+        String source = messageParts[3];
+        Proposal prop = new Proposal(messageParts[4]);
 
-        Proposal oldP = paxos.proposer.getHighestPropAcc();
+        Proposal oldP = proposer.getHighestPropAcc();
         if(oldP==null || oldP.pNumber < prop.pNumber ) {
-            paxos.proposer.setHighestPropAcc( prop );
+            proposer.setHighestPropAcc( prop );
         }
 
-        paxos.proposer.addNodeAsAcceptorOfProposal(source);
+        proposer.addNodeAsAcceptorOfProposal(source);
     }
 
     @Override
     protected String toMessage() {
-            return getID()+"," + sourceURL+ "," + proposal.toMessage();
+            return super.toMessage() + getID()+"," + sourceURL+ "," + proposal.toMessage();
     }
 
     @Override

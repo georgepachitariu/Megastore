@@ -1,6 +1,4 @@
-package megastore.paxos.message;
-
-import megastore.paxos.Paxos;
+package megastore.network.message;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -10,15 +8,13 @@ import java.nio.channels.SocketChannel;
 /**
  * Created by George on 01/05/2014.
  */
-public abstract class Message {
+public abstract class NetworkMessage {
 
     protected final String destinationURL;
-    protected Paxos paxos;
     protected SocketChannel socketChannel;
 
-    protected Message(Paxos paxos, String destinationURL) {
+    public NetworkMessage(String destinationURL) {
         this.destinationURL=destinationURL;
-        this.paxos = paxos;
     }
 
     public void send() {

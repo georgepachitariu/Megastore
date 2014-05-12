@@ -6,11 +6,19 @@ import java.util.List;
 public class Log {
     private List<LogCell> logList;
 
-    Log() {
+    public Log() {
         logList=new LinkedList<LogCell>();
     }
 
-    public void append(LogCell cell) {
+    public void append(LogCell cell, int cellNumber) {
         logList.add(cell);
+    }
+
+    public int getNextPosition() {
+        return logList.size();
+    }
+
+    public LogCell get(int i) {
+        return logList.get(i);
     }
 }
