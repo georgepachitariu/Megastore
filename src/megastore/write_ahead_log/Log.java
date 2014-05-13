@@ -1,13 +1,12 @@
 package megastore.write_ahead_log;
 
-import java.util.LinkedList;
-import java.util.List;
+import java.util.ArrayList;
 
 public class Log {
-    private List<LogCell> logList;
+    private ArrayList<LogCell> logList;
 
     public Log() {
-        logList=new LinkedList<LogCell>();
+        logList=new ArrayList<LogCell>(1000);
     }
 
     public void append(LogCell cell, int cellNumber) {

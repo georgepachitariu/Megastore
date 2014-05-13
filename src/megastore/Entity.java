@@ -4,6 +4,7 @@ import megastore.network.ListeningThread;
 import megastore.paxos.proposer.PaxosProposer;
 import megastore.write_ahead_log.Log;
 import megastore.write_ahead_log.LogCell;
+import megastore.write_ahead_log.ValidLogCell;
 import megastore.write_ahead_log.WriteOperation;
 
 import java.util.LinkedList;
@@ -28,30 +29,36 @@ public class Entity {
     }
 
     public boolean put( String key, String value) {
+
         long hash=getHashValue(key);
-
-        // 1. make paxos to get consensus on all required nodes
+        PaxosProposer proposer=new PaxosProposer(startingHashPoint, log.getNextPosition(), megastore, nodesURL);
         ListeningThread currentThread=megastore.getThread();
-        PaxosProposer p=new PaxosProposer(startingHashPoint, 0, megastore, nodesURL);
-        currentThread.addProposer(p);
-        LogCell cell = getLogCell(hash,value);
-        p.proposeValue(cell);
-        if(! p.getFinalValue().equals(cell) ) {
-            return false;    // it failed
-        }
+        currentThread.addProposer(proposer);
 
-        // 2. on success: write it on log (which should be written down on disk)
-        log.append(p.getFinalValue(), log.getNextPosition());
+//        1. Accept Leader: Ask the leader to accept the value as proposal number zero.
+//            The leader is the node that succeded the last write.
+        String lastPostionsLeaderURL=log.get(log.getNextPosition()-1).getLeaderUrl();
+        ValidLogCell cell = createLogCell(hash, value);
+        boolean leaderProposalResult=proposer.proposeValueToLeader(lastPostionsLeaderURL, cell);
+        boolean writeOperationResult=true;
 
-        // 3. make the write on bigtable
+        if(leaderProposalResult)
+            proposer.proposeValueEnforced(cell);
+        else
+            writeOperationResult=proposer.proposeValueTwoPhases(cell);
 
-        return true;
+        // TODO get last value and put it in log
+
+//        5. Apply: Apply the value's mutations at as many replicas as possible. If the chosen value diers from that
+//        originally proposed, return a conflict error.
+        // TODO
+        return writeOperationResult;
     }
 
-    private LogCell getLogCell(long key, String value) {
+    private ValidLogCell createLogCell(long key, String value) {
         List<WriteOperation> list = new LinkedList<WriteOperation>();
         list.add(new WriteOperation(key,value));
-        return new LogCell(list);
+        return new ValidLogCell(megastore.getCurrentUrl(), list);
     }
 
     public long getHashValue(String key) {
@@ -82,7 +89,45 @@ public class Entity {
     }
 
     public LogCell get(String white) {
+//        In preparation for a current read (as well as before a
+//        write), at least one replica must be brought up to date: all
+//        mutations previously committed to the log must be copied
+//        to and applied on that replica. (this replica is selected)
+
+//        1.Query Local: Query the local replica's coordinator to determine
+//        if the entity group is up-to-date locally.
+        megastore.getCoordinator().isUpToDate(startingHashPoint);
+
+//        2. Find Position: Determine the highest possibly-committed log position,
+//        and select a replica that has applied through that log position.
+        //TODO
+
+//        (a) (Local read) If step 1 indicates that the local replica is up-to-date,
+//        read the highest accepted log position and timestamp from the local replica.
+
+
+//        (b) (Majority read) If the local replica is not up-to-date (or if step 1 or step 2a times out),
+//        read from a majority of replicas to nd the maximum log position that any replica
+//        has seen, and pick a replica to read from. We select the most responsive
+//        or up-to-date replica, not always the local replica.
+
+//        3. Catchup: As soon as a replica is selected, catch it up to the maximum known log position as follows:
+
+//        (a) For each log position in which the selected replica does not know the consensus value, read the
+//        value from another replica. For any log positions without a known-committed value available, in-
+//        voke Paxos to propose a no-op write. Paxos will drive a majority of replicas to converge on a single
+//        value|either the no-op or a previously proposed write.
+
+//        (b) Sequentially apply the consensus value of all unapplied log positions to advance the replica's state
+//        to the distributed consensus state.
+
+//        4. Validate: If the local replica was selected and was not previously up-to-date, send the coordinator a validate
+//        message asserting that the (entity group; replica) pair reflects all committed writes. Do not wait for a reply|
+//        if the request fails, the next read will retry.
+
+//        5. Query Data: Read the selected replica using the timestamp of the selected log position. If the selected
+//        replica becomes unavailable, pick an alternate replica, perform catchup, and read from it instead. The results
+//        of a single large query may be assembled transparently from multiple replicas.
         return null;
-        // TODO
     }
 }

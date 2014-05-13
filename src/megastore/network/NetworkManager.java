@@ -79,4 +79,8 @@ public class NetworkManager {
     public Megastore getMegastore() {
         return megastore;
     }
+
+    public void writeUnacceptedValueOnLog(long entityId, int cellNumber) {
+        megastore.appendUnacceptedValue(entityId, cellNumber);
+    }
 }

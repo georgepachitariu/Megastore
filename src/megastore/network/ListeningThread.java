@@ -1,5 +1,6 @@
 package megastore.network;
 
+import megastore.coordinator.message.InvalidateKeyMessage;
 import megastore.network.message.AvailableNodesMessage;
 import megastore.network.message.IntroductionMessage;
 import megastore.network.message.NetworkMessage;
@@ -11,9 +12,7 @@ import megastore.paxos.message.phase1.PrepReqAccepted;
 import megastore.paxos.message.phase1.PrepReqAcceptedWithProp;
 import megastore.paxos.message.phase1.PrepReqRejected;
 import megastore.paxos.message.phase1.PrepareRequest;
-import megastore.paxos.message.phase2.AR_Accepted;
-import megastore.paxos.message.phase2.AR_Rejected;
-import megastore.paxos.message.phase2.AcceptRequest;
+import megastore.paxos.message.phase2.*;
 import megastore.paxos.proposer.PaxosProposer;
 
 import java.io.IOException;
@@ -69,12 +68,14 @@ public class ListeningThread  implements Runnable  {
         knownAcceptorMessages.add(new PrepReqRejected(-1,-1,null,null,null,-1));
         knownAcceptorMessages.add(new AR_Accepted(-1,-1,null,null,null,-1));
         knownAcceptorMessages.add(new AR_Rejected(-1,-1,null,null,null,-1));
+        knownAcceptorMessages.add(new EnforcedAR_Accepted(-1,-1,null,null,null));
     }
 
     private void addPaxosProposerMessages() {
         knownProposerMessages =new LinkedList<PaxosProposerMessage>();
         knownProposerMessages.add(new PrepareRequest(-1,-1,networkManager,null,null,-1));
         knownProposerMessages.add(new AcceptRequest(-1,-1,networkManager,null,null,null));
+        knownProposerMessages.add(new EnforcedAcceptRequest(-1,-1,networkManager,null,null,null));
     }
 
     private void addNetworkMessages() {
@@ -82,6 +83,7 @@ public class ListeningThread  implements Runnable  {
         knownNetworkMessages.add(new IntroductionMessage(networkManager,null,null));
         knownNetworkMessages.add(new AvailableNodesMessage(networkManager,null,null));
         knownNetworkMessages.add(new NewEntityMessage(networkManager,null,-1,null));
+        knownNetworkMessages.add(new InvalidateKeyMessage(networkManager,null,-1));
     }
 
     public void addProposer(PaxosProposer paxosProposer) {

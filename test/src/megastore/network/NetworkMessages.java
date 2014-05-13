@@ -3,6 +3,7 @@ package megastore.network;
 import megastore.Entity;
 import megastore.Megastore;
 import megastore.write_ahead_log.LogCell;
+import megastore.write_ahead_log.ValidLogCell;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -37,9 +38,9 @@ public class NetworkMessages {
             System.out.println("Put command failed");
         else {
             LogCell cell = m2.getExistingEntities().get(0).getLog().get(0);
-            Assert.assertTrue(e.getHashValue("white") == cell.logList.get(0).key);
-            Assert.assertTrue(cell.logList.get(0).newValue.equals("cat"));
-            Assert.assertTrue(m1.getExistingEntities().get(0).getLog().get(0).logList.get(0).newValue.equals("cat"));
+            Assert.assertTrue(e.getHashValue("white") == ((ValidLogCell) cell).logList.get(0).key);
+            Assert.assertTrue(((ValidLogCell) cell).logList.get(0).newValue.equals("cat"));
+            Assert.assertTrue(((ValidLogCell) m1.getExistingEntities().get(0).getLog().get(0)).logList.get(0).newValue.equals("cat"));
         }
 
         m1.close();
@@ -57,7 +58,6 @@ public class NetworkMessages {
 
         Entity e2 = m2.getEntity(e1.getEntityID());
         LogCell result=e2.get("white");
-        }
 
         m1.close();
         m2.close();

@@ -1,10 +1,13 @@
 package megastore.paxos.proposer;
 
 import megastore.Megastore;
+import megastore.coordinator.message.InvalidateKeyMessage;
 import megastore.paxos.acceptor.PaxosAcceptor;
 import megastore.paxos.message.phase1.PrepareRequest;
 import megastore.paxos.message.phase2.AcceptRequest;
+import megastore.paxos.message.phase2.EnforcedAcceptRequest;
 import megastore.write_ahead_log.LogCell;
+import megastore.write_ahead_log.ValidLogCell;
 
 import java.util.Collections;
 import java.util.LinkedList;
@@ -21,14 +24,13 @@ public class PaxosProposer {
 
     private Object propAccListLock=new Object();
     private List<String> proposalAcceptorsList;
-    private int proposalRejectorsNr;
+    private List<String> proposalRejectorsList;
 
     private Object valueAccListLock=new Object();
     private List<String> valueAcceptorsList;
 
     private Proposal highestPropAcc;
     private int proposalNumber;
-    private int valueRejectorsNr;
     private LogCell finalValue; // in the end this value must be the same on all nodes
 
 
@@ -39,15 +41,66 @@ public class PaxosProposer {
         valueAcceptorsList=new LinkedList<String>();
         proposalNumber =-1;
         highestPropAcc=null;
-        proposalRejectorsNr=0;
-        valueRejectorsNr=0;
+        proposalRejectorsList=new LinkedList<String>();
         this.megastore=megastore;
         this.entityId=entityId;
         this.cellNumber=cellNumber;
     }
 
-    public boolean proposeValue(LogCell value) {
-        boolean succeeded = false;
+    public boolean proposeValueToLeader(String lastPostionsLeaderURL, ValidLogCell cell) {
+        new AcceptRequest(entityId, cellNumber, null, megastore.getCurrentUrl(),
+                lastPostionsLeaderURL, new Proposal(cell, 0)).send();
+
+        int responded=0;
+        try {
+            do {
+                Thread.sleep(10); // we wait for the response to come;
+                responded += valueAcceptorsList.size();
+                responded += proposalRejectorsList.size();
+            } while (responded==0);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+        return valueAcceptorsList.size()==1;
+    }
+
+    public boolean proposeValueEnforced(ValidLogCell value) {
+        valueAcceptorsList.clear();
+
+        for (String url : nodesURL) {
+            if (!megastore.getCurrentUrl().equals(url))
+                new EnforcedAcceptRequest(entityId, cellNumber, null,
+                        megastore.getCurrentUrl(), url, value).send();
+        }
+
+        try {
+            int nrOfAcceptors, allParticipants;
+            do {
+                Thread.sleep(10); // we wait for the value acceptance messages to come;
+                nrOfAcceptors = valueAcceptorsList.size();
+                allParticipants = nodesURL.size();
+                //    } while(nrOfAcceptors +1 <= allParticipants/2); //production code
+            } while (nrOfAcceptors + 1 < allParticipants);// my test code
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+        invalidateNonResponders();
+        return  true;
+    }
+
+    public void invalidateNonResponders() {
+        //for the rest of them I have to remove them from the Coordinator
+        List<String> nonResponders=new LinkedList<String>();
+        Collections.copy(nonResponders, nodesURL);
+        nonResponders.removeAll(valueAcceptorsList);
+
+        for(String url : nonResponders)
+            new InvalidateKeyMessage(null,url,entityId).send();
+
+        this.finalValue = highestPropAcc.value;
+    }
+
+    public boolean proposeValueTwoPhases(ValidLogCell value) {
         try {
             // Phase 1
             sendPrepareRequests();
@@ -56,7 +109,7 @@ public class PaxosProposer {
             do {
                 Thread.sleep(10); // we wait for the proposal acceptance messages to come;
                 nrOfAcceptors = proposalAcceptorsList.size();
-                nrOfRejectors= proposalRejectorsNr;
+                nrOfRejectors= proposalRejectorsList.size();
                 allParticipants = nodesURL.size();
 
                 //   if(nrOfRejectors>=(allParticipants+1)/2) //prod code
@@ -77,7 +130,7 @@ public class PaxosProposer {
             do {
                 Thread.sleep(10); // we wait for the value acceptance messages to come;
                 nrOfAcceptors = valueAcceptorsList.size();
-                nrOfRejectors= valueRejectorsNr;
+                nrOfRejectors= proposalRejectorsList.size();
                 allParticipants = nodesURL.size();
 
                 //      if(nrOfRejectors>=(allParticipants+1)/2) // prod code
@@ -86,6 +139,10 @@ public class PaxosProposer {
 
                 //    } while(nrOfAcceptors +1 <= allParticipants/2); //production code
             } while (nrOfAcceptors + 1 < allParticipants);// my test code
+
+            //for the rest of them I have to remove them from the Coordinator
+            for(String url : proposalRejectorsList)
+                new InvalidateKeyMessage(null,url,entityId).send();
 
             //great. Consensus was achieved on a majority of nodes.
             this.finalValue = highestPropAcc.value;
@@ -116,17 +173,13 @@ public class PaxosProposer {
 //    each of those acceptors for a proposal numbered n with a value v, where v is the
 //    value of the highest-numbered proposal among the responses, or is any value if
 //    the responses reported no proposals.
-    public void sendAcceptRequests(LogCell value) {
-        //      boolean operationResult;
+    public void sendAcceptRequests(ValidLogCell value) {
         if(highestPropAcc==null) {
             highestPropAcc=new Proposal(value, proposalNumber);
         }
         else {
-           if( highestPropAcc.pNumber< proposalNumber)
-               highestPropAcc.pNumber= proposalNumber;
-//            operationResult=false;
-            // because even if we succeed, we don't insert the expected value
-            // but another one
+            if( highestPropAcc.pNumber< proposalNumber)
+                highestPropAcc.pNumber= proposalNumber;
         }
 
         synchronized (propAccListLock) {
@@ -165,16 +218,6 @@ public class PaxosProposer {
         }
     }
 
-    public List<String> getProposalAcceptorsList() {
-        synchronized (propAccListLock) {
-            return proposalAcceptorsList;
-        }
-    }
-
-    public int getProposalNumber() {
-        return proposalNumber;
-    }
-
     public void setHighestPropAcc(Proposal highestPropAcc) {
         this.highestPropAcc = highestPropAcc;
     }
@@ -183,51 +226,19 @@ public class PaxosProposer {
         return highestPropAcc;
     }
 
-    public List<String> getValueAcceptorsList() {
-        synchronized (valueAccListLock) {
-            return valueAcceptorsList;
-        }
-    }
-
     public void addToValueAcceptorsList(String acceptorURL) {
         synchronized (valueAccListLock) {
             this.valueAcceptorsList.add(acceptorURL);
         }
     }
 
-    public List<String> getNodesURL() {
-        return nodesURL;
-    }
-
-    public int getProposalRejectorsNr() {
-        return proposalRejectorsNr;
-    }
-
-    public void increaseProposalRejectorsNr() {
-        proposalRejectorsNr++;
-    }
-
-    public void cleanUp() {
-        finalValue=null;
-        proposalAcceptorsList=new LinkedList<String>();
-        valueAcceptorsList=new LinkedList<String>();
-        highestPropAcc=null;
-        proposalNumber =-1;
-        proposalRejectorsNr=0;
-        valueRejectorsNr=0;
-    }
-
-    public void cleanProposalAcceptorsList() {
-        proposalAcceptorsList=new LinkedList<String>();
-        valueAcceptorsList=new LinkedList<String>();
-    }
-
-    public void increaseValueRejectorsNr() {
-        valueRejectorsNr++;
-    }
-
-    public int getValueRejectorsNr() {
-        return valueRejectorsNr;
+    public void addProposalRejector(String nodeURL) {
+        boolean isAlready=false;
+        for(String p : proposalRejectorsList)
+            if(p.equals(nodeURL))
+                isAlready=true;
+        if(! isAlready)
+            proposalRejectorsList.add(nodeURL);
     }
 
     public boolean isTheRightSession(String entityId, String cellNumber) {
@@ -238,6 +249,4 @@ public class PaxosProposer {
     public LogCell getFinalValue() {
         return finalValue;
     }
-
-
 }
