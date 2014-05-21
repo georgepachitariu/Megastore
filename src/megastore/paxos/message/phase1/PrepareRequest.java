@@ -20,6 +20,8 @@ public class PrepareRequest extends PaxosProposerMessage {
         //            that of any prepare request to which it has already responded,
         int propNumber = Integer.parseInt(messageParts[4]);
         String sourceL=messageParts[3];
+        entityId=Long.parseLong(messageParts[0]);
+        cellNumber=Integer.parseInt(messageParts[1]);
 
         Proposal highestPropAcc = acceptor.getHighestPropAcc();
         int highestPropNumberAcc = acceptor.getHighestPropNumberAcc();

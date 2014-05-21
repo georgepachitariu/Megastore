@@ -80,7 +80,7 @@ public class NetworkManager {
         return megastore;
     }
 
-    public void writeUnacceptedValueOnLog(long entityId, int cellNumber) {
-        megastore.appendUnacceptedValue(entityId, cellNumber);
+    public void writeUnacceptedValueOnLog(long entityId, int cellNumber, String leader) {
+        megastore.appendUnacceptedValue(entityId, cellNumber, leader);
     }
 }

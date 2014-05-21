@@ -35,23 +35,32 @@ public class Entity {
         ListeningThread currentThread=megastore.getThread();
         currentThread.addProposer(proposer);
 
-//        1. Accept Leader: Ask the leader to accept the value as proposal number zero.
-//            The leader is the node that succeded the last write.
-        String lastPostionsLeaderURL=log.get(log.getNextPosition()-1).getLeaderUrl();
+        boolean writeOperationResult = true;
         ValidLogCell cell = createLogCell(hash, value);
-        boolean leaderProposalResult=proposer.proposeValueToLeader(lastPostionsLeaderURL, cell);
-        boolean writeOperationResult=true;
-
-        if(leaderProposalResult)
-            proposer.proposeValueEnforced(cell);
-        else
+//      Accept Leader: Ask the leader to accept the value as proposal number zero.
+//      The leader is the node that succeded the last write.
+        int lastPosition=log.getNextPosition()-1;
+        if(lastPosition==-1) { // if there wasn't a position before
             writeOperationResult=proposer.proposeValueTwoPhases(cell);
+            System.out.println("Two Rounds");
+        }
+        else {
+            String lastPostionsLeaderURL = log.get(lastPosition).getLeaderUrl();
+            boolean leaderProposalResult = proposer.proposeValueToLeader(lastPostionsLeaderURL, cell);
 
-        // TODO get last value and put it in log
+            if (leaderProposalResult) {
+                proposer.proposeValueEnforced(cell, lastPostionsLeaderURL);
+                System.out.println("One Round");
+            }
+            else {
+                writeOperationResult = proposer.proposeValueTwoPhases(cell);
+               System.out.println("Two Rounds");
+             }
+        }
+        log.append(proposer.getFinalValue(), log.getNextPosition());
 
-//        5. Apply: Apply the value's mutations at as many replicas as possible. If the chosen value diers from that
-//        originally proposed, return a conflict error.
-        // TODO
+        currentThread.removeProposer(proposer);
+
         return writeOperationResult;
     }
 

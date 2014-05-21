@@ -20,4 +20,15 @@ public class WriteOperation {
     public String toString() {
         return key+ "w" +newValue.toString();
     }
+
+    @Override
+    public boolean equals(Object obj) {
+        if(! (obj instanceof WriteOperation) )
+            return false;
+        WriteOperation op=(WriteOperation) obj;
+        if(op.key == this.key && op.newValue.equals(this.newValue))
+            return true;
+        else
+            return false;
+    }
 }

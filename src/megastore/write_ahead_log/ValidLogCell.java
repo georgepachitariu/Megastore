@@ -10,11 +10,12 @@ public class ValidLogCell extends LogCell {
     public List<WriteOperation> logList;
 
     public ValidLogCell(String leaderUrl, List<WriteOperation> logList) {
+        super(leaderUrl);
         this.logList = logList;
-        super.leaderUrl=leaderUrl;
     }
 
     public ValidLogCell(String raw) {
+        super("");
         logList=new LinkedList<WriteOperation>();
         String[] parts = raw.split("q");
         super.leaderUrl=parts[0];
@@ -24,7 +25,7 @@ public class ValidLogCell extends LogCell {
 
     @Override
     public String toString() {
-        String str="leaderUrl"+"q";
+        String str=leaderUrl+"q";
         for(int i=0; i < logList.size(); i++)
             str +=logList.get(i).toString() + "q";
         return str;

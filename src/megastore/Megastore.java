@@ -36,8 +36,10 @@ public class Megastore {
         List<String> list = networkManager.getNodesURL();
         for(String s: list)
                if(!getCurrentUrl().equals(s))
-                    new NewEntityMessage(networkManager, s, e.getEntityID(), networkManager.getNodesURL()).send();
+                    new NewEntityMessage(networkManager, s, e.getEntityID(),
+                            networkManager.getNodesURL()).send();
 
+        coordinator.addEntity(e.getEntityID());
         return e;
     }
 
@@ -87,6 +89,7 @@ public class Megastore {
     public void addEntity(long entityID, List<String> urls) {
         Entity e=new Entity(urls, this, entityID);
         existingEntities.add(e);
+        coordinator.addEntity(e.getEntityID());
     }
 
     public void invalidate(long entityID) {
@@ -97,11 +100,11 @@ public class Megastore {
         return coordinator;
     }
 
-    public void appendUnacceptedValue(long entityId, int cellNumber) {
+    public void appendUnacceptedValue(long entityId, int cellNumber, String leader) {
         boolean entityFound=false;
         for(Entity e : existingEntities)
             if(e.getEntityID()==entityId) {
-                e.appendToLog(new UnacceptedLogCell(), cellNumber);
+                e.appendToLog(new UnacceptedLogCell(leader), cellNumber);
                 entityFound=true;
             }
         if(! entityFound)

@@ -10,7 +10,7 @@ public class Log {
     }
 
     public void append(LogCell cell, int cellNumber) {
-        logList.add(cell);
+        logList.add(cellNumber, cell);
     }
 
     public int getNextPosition() {

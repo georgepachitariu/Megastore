@@ -16,7 +16,7 @@ public class EnforcedAR_Accepted extends PaxosAcceptorMessage {
 
     @Override
     public void act(String[] messageParts) {
-        String source=messageParts[4];
+        String source=messageParts[3];
         proposer.addToValueAcceptorsList(source);
     }
 

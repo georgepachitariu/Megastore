@@ -73,9 +73,9 @@ public class ListeningThread  implements Runnable  {
 
     private void addPaxosProposerMessages() {
         knownProposerMessages =new LinkedList<PaxosProposerMessage>();
-        knownProposerMessages.add(new PrepareRequest(-1,-1,networkManager,null,null,-1));
-        knownProposerMessages.add(new AcceptRequest(-1,-1,networkManager,null,null,null));
-        knownProposerMessages.add(new EnforcedAcceptRequest(-1,-1,networkManager,null,null,null));
+        knownProposerMessages.add(new PrepareRequest(-1, -1, networkManager, null, null, -1));
+        knownProposerMessages.add(new AcceptRequest(-1, -1, networkManager, null, null, null));
+        knownProposerMessages.add(new EnforcedAcceptRequest(-1, -1, networkManager, null, null, null));
     }
 
     private void addNetworkMessages() {
@@ -197,5 +197,9 @@ public class ListeningThread  implements Runnable  {
 
     public  List<PaxosAcceptor> getAcceptorSession() {
         return acceptingSessionsOpen;
+    }
+
+    public void removeProposer(PaxosProposer proposer) {
+        proposingSessionsOpen.remove(proposer);
     }
 }

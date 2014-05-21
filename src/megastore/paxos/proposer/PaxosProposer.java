@@ -64,11 +64,12 @@ public class PaxosProposer {
         return valueAcceptorsList.size()==1;
     }
 
-    public boolean proposeValueEnforced(ValidLogCell value) {
+    public boolean proposeValueEnforced(ValidLogCell value, String olderLeaderUrl) {
         valueAcceptorsList.clear();
 
         for (String url : nodesURL) {
-            if (!megastore.getCurrentUrl().equals(url))
+            // the leader already accepted, so we don't have to send him again
+            if (! ( megastore.getCurrentUrl().equals(url) || olderLeaderUrl.equals(url)) )
                 new EnforcedAcceptRequest(entityId, cellNumber, null,
                         megastore.getCurrentUrl(), url, value).send();
         }
@@ -80,24 +81,26 @@ public class PaxosProposer {
                 nrOfAcceptors = valueAcceptorsList.size();
                 allParticipants = nodesURL.size();
                 //    } while(nrOfAcceptors +1 <= allParticipants/2); //production code
-            } while (nrOfAcceptors + 1 < allParticipants);// my test code
+            } while (nrOfAcceptors + 2 < allParticipants);// my test code
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
         invalidateNonResponders();
+        this.finalValue = value;
         return  true;
     }
 
     public void invalidateNonResponders() {
         //for the rest of them I have to remove them from the Coordinator
-        List<String> nonResponders=new LinkedList<String>();
-        Collections.copy(nonResponders, nodesURL);
+        LinkedList<String> nonResponders = new LinkedList<String>();
+            for(String item: nodesURL)
+                nonResponders.add(new String(item));
+
         nonResponders.removeAll(valueAcceptorsList);
+        nonResponders.remove(megastore.getCurrentUrl());
 
         for(String url : nonResponders)
             new InvalidateKeyMessage(null,url,entityId).send();
-
-        this.finalValue = highestPropAcc.value;
     }
 
     public boolean proposeValueTwoPhases(ValidLogCell value) {

@@ -33,11 +33,12 @@ public abstract class NetworkMessage {
             while (buf.hasRemaining()) {
                 socketChannel.write(buf);
             }
+            socketChannel.finishConnect();
+
         } catch (IOException e) {
             e.printStackTrace();
         }  finally {
             try {
-                socketChannel.finishConnect();
                 socketChannel.close();
             } catch (IOException e) {
                 e.printStackTrace();

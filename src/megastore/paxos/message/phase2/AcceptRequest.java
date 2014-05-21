@@ -37,7 +37,7 @@ public class AcceptRequest extends PaxosProposerMessage {
        }
         else {
             // it sends a denial message
-            networkManager.writeUnacceptedValueOnLog(entityId, cellNumber);// we write the unaccepted value on log
+            networkManager.writeUnacceptedValueOnLog(entityId, cellNumber, source);// we write the unaccepted value on log
             new AR_Rejected(entityId, cellNumber,null, networkManager.getCurrentUrl(), source,  prop.pNumber).send();
         }
     }

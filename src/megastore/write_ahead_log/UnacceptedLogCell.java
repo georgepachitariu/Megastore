@@ -5,6 +5,6 @@ package megastore.write_ahead_log;
  */
 public class UnacceptedLogCell extends LogCell{
     public UnacceptedLogCell(String leaderUrl) {
-        super.leaderUrl=leaderUrl;
+        super(leaderUrl);
     }
 }

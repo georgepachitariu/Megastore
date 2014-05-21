@@ -15,6 +15,8 @@ public abstract class PaxosAcceptorMessage extends NetworkMessage {
     protected PaxosAcceptorMessage(PaxosProposer proposer, String destinationURL, long entityId, int cellNumber) {
         super(destinationURL);
         this.proposer = proposer;
+        this.entityId=entityId;
+        this.cellNumber=cellNumber;
     }
 
     public abstract void act(String[] messageParts);

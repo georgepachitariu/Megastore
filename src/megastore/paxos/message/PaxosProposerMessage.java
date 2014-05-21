@@ -18,6 +18,8 @@ public abstract class PaxosProposerMessage extends NetworkMessage {
                                        String destinationURL, long entityId, int cellNumber) {
             super(destinationURL);
             this.networkManager=networkManager;
+            this.entityId=entityId;
+            this.cellNumber=cellNumber;
         }
 
         public abstract void act(String[] messageParts);
