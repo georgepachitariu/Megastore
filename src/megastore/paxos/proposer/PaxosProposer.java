@@ -149,7 +149,7 @@ public class PaxosProposer {
 
             //great. Consensus was achieved on a majority of nodes.
             this.finalValue = highestPropAcc.value;
-            return true;
+            return result;
         } catch (InterruptedException e) {
             e.printStackTrace();
         }

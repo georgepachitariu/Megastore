@@ -29,8 +29,19 @@ public class Megastore {
         coordinator=new Coordinator();
     }
 
+    public Megastore(String port, List<Entity> existingEntities) {
+        this(port);
+        this.existingEntities=existingEntities;
+    }
+
+    public Megastore(String port, String existingNodeAdress, List<Entity> existingEntities) {
+        this(port,existingNodeAdress);
+        this.existingEntities=existingEntities;
+    }
+
     public Entity createEntity() {
-        Entity e = new Entity(networkManager.getNodesURL(), this, 0);
+        long entityID=existingEntities.size()*Entity.rangeSize;
+        Entity e = new Entity(networkManager.getNodesURL(), this, entityID);
         existingEntities.add(e);
 
         List<String> list = networkManager.getNodesURL();

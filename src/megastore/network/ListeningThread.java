@@ -1,10 +1,11 @@
 package megastore.network;
 
 import megastore.coordinator.message.InvalidateKeyMessage;
-import megastore.network.message.AvailableNodesMessage;
-import megastore.network.message.IntroductionMessage;
-import megastore.network.message.NetworkMessage;
-import megastore.network.message.NewEntityMessage;
+import megastore.network.message.*;
+import megastore.network.message.paxos_optimisation.AreYouUpToDateMessage;
+import megastore.network.message.paxos_optimisation.LogCellsRequestedMessage;
+import megastore.network.message.paxos_optimisation.RequestValidLogCellsMessage;
+import megastore.network.message.paxos_optimisation.UpToDateConfirmedMessage;
 import megastore.paxos.acceptor.PaxosAcceptor;
 import megastore.paxos.message.PaxosAcceptorMessage;
 import megastore.paxos.message.PaxosProposerMessage;
@@ -84,6 +85,10 @@ public class ListeningThread  implements Runnable  {
         knownNetworkMessages.add(new AvailableNodesMessage(networkManager,null,null));
         knownNetworkMessages.add(new NewEntityMessage(networkManager,null,-1,null));
         knownNetworkMessages.add(new InvalidateKeyMessage(networkManager,null,-1));
+        knownNetworkMessages.add(new AreYouUpToDateMessage(-1,networkManager,null,null));
+        knownNetworkMessages.add(new UpToDateConfirmedMessage(-1,networkManager,null,null));
+        knownNetworkMessages.add(new RequestValidLogCellsMessage(-1,networkManager,null,null,null,-1));
+        knownNetworkMessages.add(new LogCellsRequestedMessage(-1,networkManager,null,null));
     }
 
     public void addProposer(PaxosProposer paxosProposer) {

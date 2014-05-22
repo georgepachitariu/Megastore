@@ -35,4 +35,10 @@ public class Coordinator {
         System.out.println("EntityID not found");
         return false;
     }
+
+    public void validate(long entityID) {
+        for(EntityState e : entities)
+            if(e.entityID == entityID)
+                e.isValid=true;
+    }
 }

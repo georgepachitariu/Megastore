@@ -11,14 +11,14 @@ public class WriteOperation {
     }
 
     public WriteOperation(String raw) {
-        String[] parts = raw.split("w");
+        String[] parts = raw.split("`");
         key=Long.parseLong(parts[0]);
         newValue=parts[1];
     }
 
     @Override
     public String toString() {
-        return key+ "w" +newValue.toString();
+        return key+ "`" +newValue.toString();
     }
 
     @Override

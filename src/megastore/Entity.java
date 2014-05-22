@@ -1,6 +1,8 @@
 package megastore;
 
 import megastore.network.ListeningThread;
+import megastore.network.message.paxos_optimisation.AreYouUpToDateMessage;
+import megastore.network.message.paxos_optimisation.RequestValidLogCellsMessage;
 import megastore.paxos.proposer.PaxosProposer;
 import megastore.write_ahead_log.Log;
 import megastore.write_ahead_log.LogCell;
@@ -14,19 +16,24 @@ import java.util.List;
  * Created by George on 12/05/2014.
  */
 public class Entity {
-    private static final long rangeSize=10000;
+    public  static final long rangeSize=10000;
     private long startingHashPoint;
     private List<String> nodesURL;
     private Log log;
-
     private Megastore megastore;
 
+
     public Entity(List<String> nodesURL, Megastore megastore, long startingHashPoint) {
+        this(nodesURL,megastore,startingHashPoint,new Log());
+    }
+
+    public Entity(List<String> nodesURL, Megastore megastore, long startingHashPoint, Log log) {
         this.startingHashPoint = startingHashPoint;
         this.megastore=megastore;
         this.nodesURL=nodesURL;
-        log=new Log();
+        this.log=log;
     }
+
 
     public boolean put( String key, String value) {
 
@@ -40,7 +47,7 @@ public class Entity {
 //      Accept Leader: Ask the leader to accept the value as proposal number zero.
 //      The leader is the node that succeded the last write.
         int lastPosition=log.getNextPosition()-1;
-        if(lastPosition==-1) { // if there wasn't a position before
+        if(lastPosition==-1) { // if there wasn't any value proposed before there isn't any leader
             writeOperationResult=proposer.proposeValueTwoPhases(cell);
             System.out.println("Two Rounds");
         }
@@ -54,11 +61,11 @@ public class Entity {
             }
             else {
                 writeOperationResult = proposer.proposeValueTwoPhases(cell);
-               System.out.println("Two Rounds");
-             }
+                System.out.println("Two Rounds");
+            }
         }
-        log.append(proposer.getFinalValue(), log.getNextPosition());
 
+        log.append(proposer.getFinalValue(), log.getNextPosition());
         currentThread.removeProposer(proposer);
 
         return writeOperationResult;
@@ -86,7 +93,7 @@ public class Entity {
     public void appendToLog(LogCell logCell, int cellNumber) {
         // this came from another node in the network
         log.append(logCell, cellNumber);
-        // also start a thread to write it on disk.
+        // TODO also start a thread to write it on disk.
     }
 
     public Log getLog() {
@@ -97,46 +104,88 @@ public class Entity {
         return startingHashPoint;
     }
 
-    public LogCell get(String white) {
-//        In preparation for a current read (as well as before a
-//        write), at least one replica must be brought up to date: all
-//        mutations previously committed to the log must be copied
-//        to and applied on that replica. (this replica is selected)
+    public String get(String key) {
+        long hash=getHashValue(key);
 
-//        1.Query Local: Query the local replica's coordinator to determine
-//        if the entity group is up-to-date locally.
-        megastore.getCoordinator().isUpToDate(startingHashPoint);
+//        1.Query Local: Query the local replica's coordinator to determine if the entity group is up-to-date locally.
+        if( megastore.getCoordinator().isUpToDate(startingHashPoint) ) {
+            return getLocalLastValue(hash);
+        }
+        else {
+            String nodeURL = findAnUpToDateNode();
+            updateMissingLogCellsFrom(nodeURL);
+            megastore.getCoordinator().validate(startingHashPoint);
+            return getLocalLastValue(hash);
+        }
+    }
 
-//        2. Find Position: Determine the highest possibly-committed log position,
-//        and select a replica that has applied through that log position.
-        //TODO
+    private String getLocalLastValue(long hash) {
+        // read the highest accepted log position and timestamp from the local replica.
+        String value=log.getLastValueOf(hash);
+        if(value == null) {
+            // it means that there weren't modifications in the near past for that key and so
+            // we have to read from the disk (bigtable).
+            return null;
+        }
+        else
+            return value;
+    }
 
-//        (a) (Local read) If step 1 indicates that the local replica is up-to-date,
-//        read the highest accepted log position and timestamp from the local replica.
+    private LinkedList<ValidLogCell> newCells;
+    private void updateMissingLogCellsFrom( String nodeURL) {
+        newCells=null;
 
+        List<Integer> invalidPositions=log.getInvalidPositions();
+        new RequestValidLogCellsMessage(startingHashPoint, null,
+                megastore.getCurrentUrl(), nodeURL, invalidPositions,log.getNextPosition()).send();
 
-//        (b) (Majority read) If the local replica is not up-to-date (or if step 1 or step 2a times out),
-//        read from a majority of replicas to nd the maximum log position that any replica
-//        has seen, and pick a replica to read from. We select the most responsive
-//        or up-to-date replica, not always the local replica.
+        try {
+            do {
+                Thread.sleep(3);
+            } while(newCells==null);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
 
-//        3. Catchup: As soon as a replica is selected, catch it up to the maximum known log position as follows:
+        for(int i=0; i<invalidPositions.size(); i++) {
+            log.append(newCells.get(i), invalidPositions.get(i));
+        }
+        for(int i=log.getNextPosition(); i<newCells.size(); i++) {
+            log.append(newCells.get(i), log.getNextPosition());
+        }
+    }
 
-//        (a) For each log position in which the selected replica does not know the consensus value, read the
-//        value from another replica. For any log positions without a known-committed value available, in-
-//        voke Paxos to propose a no-op write. Paxos will drive a majority of replicas to converge on a single
-//        value|either the no-op or a previously proposed write.
+    private String upToDateNode;
+    private String findAnUpToDateNode() {
+        upToDateNode =null;
 
-//        (b) Sequentially apply the consensus value of all unapplied log positions to advance the replica's state
-//        to the distributed consensus state.
+        for (String url : nodesURL) {
+            if (!  megastore.getCurrentUrl().equals(url)  )
+                new AreYouUpToDateMessage(startingHashPoint, null,
+                        megastore.getCurrentUrl(), url).send();
+        }
 
-//        4. Validate: If the local replica was selected and was not previously up-to-date, send the coordinator a validate
-//        message asserting that the (entity group; replica) pair reflects all committed writes. Do not wait for a reply|
-//        if the request fails, the next read will retry.
+        try {
+            do {
+                Thread.sleep(3);
+            } while(upToDateNode==null);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
 
-//        5. Query Data: Read the selected replica using the timestamp of the selected log position. If the selected
-//        replica becomes unavailable, pick an alternate replica, perform catchup, and read from it instead. The results
-//        of a single large query may be assembled transparently from multiple replicas.
-        return null;
+        return upToDateNode;
+    }
+
+    public void addUpToDateNode(String source) {
+        if(upToDateNode ==null) // we only allow the first (fastest) node to register;
+            upToDateNode =source;
+    }
+
+    public void setNewCells(LinkedList<ValidLogCell> list) {
+        newCells=list;
+    }
+
+    public void setMegastore(Megastore megastore) {
+        this.megastore = megastore;
     }
 }

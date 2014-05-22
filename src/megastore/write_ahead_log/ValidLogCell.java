@@ -7,35 +7,46 @@ import java.util.List;
  * Created by George on 13/05/2014.
  */
 public class ValidLogCell extends LogCell {
-    public List<WriteOperation> logList;
+    public List<WriteOperation> opList;
 
-    public ValidLogCell(String leaderUrl, List<WriteOperation> logList) {
+    public ValidLogCell(String leaderUrl, List<WriteOperation> opList) {
         super(leaderUrl);
-        this.logList = logList;
+        this.opList = opList;
     }
 
     public ValidLogCell(String raw) {
         super("");
-        logList=new LinkedList<WriteOperation>();
-        String[] parts = raw.split("q");
+        opList =new LinkedList<WriteOperation>();
+        String[] parts = raw.split("`");
         super.leaderUrl=parts[0];
         for(int i=1; i < parts.length; i++)
-            logList.add(new WriteOperation(parts[i]));
+            opList.add(new WriteOperation(parts[i]));
     }
 
     @Override
     public String toString() {
-        String str=leaderUrl+"q";
-        for(int i=0; i < logList.size(); i++)
-            str +=logList.get(i).toString() + "q";
+        String str=leaderUrl+"`";
+        for(int i=0; i < opList.size(); i++)
+            str += opList.get(i).toString() + "`";
         return str;
     }
 
     @Override
     public boolean equals(Object obj) {
-        if(! (obj instanceof LogCell))
+        if(! (obj instanceof ValidLogCell))
             return false;
-        LogCell cell=(LogCell)obj;
+        ValidLogCell cell=(ValidLogCell)obj;
         return toString().equals(cell.toString());
+    }
+
+    public String  getValue(long key) {
+        for(WriteOperation wr: opList)
+            if(wr.key==key)
+                return wr.newValue;
+        return null;
+    }
+
+    public boolean isInvalid() {
+        return false;
     }
 }

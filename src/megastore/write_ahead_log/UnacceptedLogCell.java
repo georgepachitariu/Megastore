@@ -7,4 +7,12 @@ public class UnacceptedLogCell extends LogCell{
     public UnacceptedLogCell(String leaderUrl) {
         super(leaderUrl);
     }
+
+    public String  getValue(long key) {
+        return null;
+    }
+
+    public boolean isInvalid() {
+        return true;
+    }
 }
