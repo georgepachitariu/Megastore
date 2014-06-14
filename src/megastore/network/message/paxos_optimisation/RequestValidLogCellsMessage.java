@@ -39,10 +39,12 @@ public class RequestValidLogCellsMessage extends NetworkMessage {
         LinkedList<ValidLogCell> list=new LinkedList<ValidLogCell>();
         for(int i=4; i<messageParts.length; i++) {
             int pos=Integer.parseInt( messageParts[i] );
-            list.add((ValidLogCell) log.get(pos) );
+            if(log.get(pos) instanceof ValidLogCell)
+                list.add((ValidLogCell) log.get(pos) );
         }
         for(int pos=logSize; pos<log.getNextPosition(); pos++)
-            list.add((ValidLogCell) log.get(pos));
+            if(log.get(pos) instanceof ValidLogCell)
+                list.add((ValidLogCell) log.get(pos));
 
         new LogCellsRequestedMessage(entityID, null,source, list).send();
 

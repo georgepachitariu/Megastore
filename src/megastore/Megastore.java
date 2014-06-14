@@ -5,7 +5,6 @@ import megastore.network.ListeningThread;
 import megastore.network.NetworkManager;
 import megastore.network.message.NewEntityMessage;
 import megastore.paxos.acceptor.PaxosAcceptor;
-import megastore.write_ahead_log.UnacceptedLogCell;
 import megastore.write_ahead_log.LogCell;
 
 import java.util.LinkedList;
@@ -111,14 +110,7 @@ public class Megastore {
         return coordinator;
     }
 
-    public void appendUnacceptedValue(long entityId, int cellNumber, String leader) {
-        boolean entityFound=false;
-        for(Entity e : existingEntities)
-            if(e.getEntityID()==entityId) {
-                e.appendToLog(new UnacceptedLogCell(leader), cellNumber);
-                entityFound=true;
-            }
-        if(! entityFound)
-            System.out.println("Entity not found");
+    public NetworkManager getNetworkManager() {
+        return networkManager;
     }
 }

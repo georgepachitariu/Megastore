@@ -1,45 +1,40 @@
 package megastore.network.message;
 
 import java.io.IOException;
-import java.net.InetSocketAddress;
-import java.nio.ByteBuffer;
-import java.nio.channels.SocketChannel;
+import java.net.Socket;
 
 /**
  * Created by George on 01/05/2014.
  */
 public abstract class NetworkMessage {
 
-    protected final String destinationURL;
-    protected SocketChannel socketChannel;
+    protected String destinationIP;
+    private  int destinationPort;
 
     public NetworkMessage(String destinationURL) {
-        this.destinationURL=destinationURL;
+        if(destinationURL!=null) {
+            String[] parts = destinationURL.split(":");
+            this.destinationIP = parts[0];
+            this.destinationPort = Integer.parseInt(parts[1]);
+        }
     }
 
     public void send() {
+        Socket socket=null;
         try {
-            socketChannel = SocketChannel.open();
-            socketChannel.configureBlocking(true);
-            socketChannel.connect(new InetSocketAddress(destinationURL.split(":")[0],
-                    Integer.parseInt(destinationURL.split(":")[1])
-            ));
+            socket= new Socket(destinationIP, destinationPort);
+            socket.setSoLinger(false,0);
 
-            byte[] asBytes = toMessage().getBytes();
-            ByteBuffer buf = ByteBuffer.allocate(asBytes.length);
-            buf.clear();
-            buf.put(asBytes);
-            buf.flip();
-            while (buf.hasRemaining()) {
-                socketChannel.write(buf);
-            }
-            socketChannel.finishConnect();
-
+            byte[] messageAsBytes = toMessage().getBytes();
+            socket.getOutputStream().write(messageAsBytes);
+            socket.getOutputStream().flush();
+            socket.getOutputStream().close();
         } catch (IOException e) {
             e.printStackTrace();
         }  finally {
             try {
-                socketChannel.close();
+                if(socket!=null)
+                    socket.close();
             } catch (IOException e) {
                 e.printStackTrace();
             }

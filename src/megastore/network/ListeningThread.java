@@ -1,7 +1,10 @@
 package megastore.network;
 
 import megastore.coordinator.message.InvalidateKeyMessage;
-import megastore.network.message.*;
+import megastore.network.message.AvailableNodesMessage;
+import megastore.network.message.IntroductionMessage;
+import megastore.network.message.NetworkMessage;
+import megastore.network.message.NewEntityMessage;
 import megastore.network.message.paxos_optimisation.AreYouUpToDateMessage;
 import megastore.network.message.paxos_optimisation.LogCellsRequestedMessage;
 import megastore.network.message.paxos_optimisation.RequestValidLogCellsMessage;
@@ -17,12 +20,11 @@ import megastore.paxos.message.phase2.*;
 import megastore.paxos.proposer.PaxosProposer;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.InetAddress;
-import java.net.InetSocketAddress;
+import java.net.ServerSocket;
+import java.net.Socket;
 import java.net.UnknownHostException;
-import java.nio.ByteBuffer;
-import java.nio.channels.ServerSocketChannel;
-import java.nio.channels.SocketChannel;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -39,7 +41,7 @@ public class ListeningThread  implements Runnable  {
     private List<PaxosProposerMessage> knownProposerMessages;
     private List<PaxosAcceptorMessage> knownAcceptorMessages;
 
-    private ServerSocketChannel serverSocketChannel;
+    private ServerSocket serverSocket;
 
     public ListeningThread(NetworkManager networkManager, String port) {
         proposingSessionsOpen=new LinkedList<PaxosProposer>();
@@ -47,9 +49,7 @@ public class ListeningThread  implements Runnable  {
         this.networkManager=networkManager;
 
         try {
-            serverSocketChannel = ServerSocketChannel.open();
-            serverSocketChannel.socket().bind(new InetSocketAddress(Integer.parseInt(port)));
-            serverSocketChannel.configureBlocking(true);
+            serverSocket = new ServerSocket(Integer.parseInt(port));
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -76,6 +76,7 @@ public class ListeningThread  implements Runnable  {
         knownProposerMessages =new LinkedList<PaxosProposerMessage>();
         knownProposerMessages.add(new PrepareRequest(-1, -1, networkManager, null, null, -1));
         knownProposerMessages.add(new AcceptRequest(-1, -1, networkManager, null, null, null));
+        knownProposerMessages.add(new RejectAProposalMessage(-1,-1,networkManager,null,null));
         knownProposerMessages.add(new EnforcedAcceptRequest(-1, -1, networkManager, null, null, null));
     }
 
@@ -97,36 +98,38 @@ public class ListeningThread  implements Runnable  {
 
     @Override
     public void run() {
-        SocketChannel socketChannel=null;
-
         while (isAlive) {
+            Socket clientSocket=null;
             try {
-                socketChannel = serverSocketChannel.accept();
-                socketChannel.configureBlocking(true);
+                clientSocket = serverSocket.accept();
 
-                ByteBuffer buffer = ByteBuffer.allocate(1024);
-                int size = socketChannel.read(buffer);
-                if (size <= 0)
-                    continue;
+                InputStream inputStream = clientSocket.getInputStream();
+                while(inputStream.available()==0) {
+                    try {
+                        Thread.sleep(1);
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                }
+                byte[] buffer=new byte[inputStream.available()];
 
-                buffer.flip();
-                byte[] b = new byte[size];
-                buffer.get(b);
-                String message = new String(b);
+                inputStream.read(buffer);
+                clientSocket.getInputStream().close();
+
+                String message = new String(buffer);
 
                 String[] parts = message.split(",");
-
                 boolean recognized = treatMessage(parts);
 
-                if (recognized == false)
+                if (! recognized )
                     System.out.println("Network Message Not Recognized");
 
             } catch (IOException e) {
                 e.printStackTrace();
             } finally {
                 try {
-                    socketChannel.finishConnect();
-                    socketChannel.close();
+                    if(clientSocket!=null)
+                        clientSocket.close();
                 } catch (IOException e) {
                     e.printStackTrace();
                 }
@@ -135,8 +138,6 @@ public class ListeningThread  implements Runnable  {
     }
 
     private boolean treatMessage(String[] parts) {
-        boolean recognized=false;
-
         for(NetworkMessage m : knownNetworkMessages) {
             if (m.getID().equals(parts[0])) {
                 m.act(parts);
@@ -144,7 +145,9 @@ public class ListeningThread  implements Runnable  {
             }
         }
 
-        PaxosAcceptor session = getApropriatePaxosAcceptor(parts);
+        long entityId=Long.parseLong(parts[0]);
+        int cellNumber=Integer.parseInt(parts[1]);
+        PaxosAcceptor session = getApropriatePaxosAcceptor(entityId,cellNumber);
         for(PaxosProposerMessage m : knownProposerMessages) {
             if (m.getID().equals(parts[2])) {
                 m.setAcceptor(session);
@@ -157,7 +160,12 @@ public class ListeningThread  implements Runnable  {
         for(PaxosAcceptorMessage m : knownAcceptorMessages) {
             if (m.getID().equals(parts[2])) {
                 m.setProposer(proposer);
-                m.act(parts);
+                if(proposer!=null) {
+                    //sometimes a majority has been achieved (of acceptors or rejectors)
+                    // before some messages (like this one) have arrived
+                    // so the proposer doesn't exist anymore
+                    m.act(parts);
+                }
                 return true;
             }
         }
@@ -173,16 +181,14 @@ public class ListeningThread  implements Runnable  {
         return session;
     }
 
-    private PaxosAcceptor getApropriatePaxosAcceptor(String[] parts) {
+    public PaxosAcceptor getApropriatePaxosAcceptor(long entityId, int cellNumber) {
         PaxosAcceptor session=null;
-        long p1=Long.parseLong(parts[0]);
-        int p2=Integer.parseInt(parts[1]);
 
         for(PaxosAcceptor p : acceptingSessionsOpen)
-            if(p.isTheRightSession(p1,p2))
+            if(p.isTheRightSession(entityId,cellNumber))
                 session= p;
         if(session==null) {
-            session = new PaxosAcceptor(p1,p2);
+            session = new PaxosAcceptor(entityId,cellNumber);
         }
         return session;
     }

@@ -80,7 +80,7 @@ public class NetworkManager {
         return megastore;
     }
 
-    public void writeUnacceptedValueOnLog(long entityId, int cellNumber, String leader) {
-        megastore.appendUnacceptedValue(entityId, cellNumber, leader);
+    public boolean isLogPosOccupied(long entityId, int cellNumber) {
+        return megastore.getEntity(entityId).getLog().isOccupied(cellNumber);
     }
 }

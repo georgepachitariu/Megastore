@@ -38,7 +38,8 @@ public class Entity {
     public boolean put( String key, String value) {
 
         long hash=getHashValue(key);
-        PaxosProposer proposer=new PaxosProposer(startingHashPoint, log.getNextPosition(), megastore, nodesURL);
+        int currentPosition=log.getNextPosition();
+        PaxosProposer proposer=new PaxosProposer(startingHashPoint, currentPosition, megastore, nodesURL);
         ListeningThread currentThread=megastore.getThread();
         currentThread.addProposer(proposer);
 
@@ -46,28 +47,34 @@ public class Entity {
         ValidLogCell cell = createLogCell(hash, value);
 //      Accept Leader: Ask the leader to accept the value as proposal number zero.
 //      The leader is the node that succeded the last write.
-        int lastPosition=log.getNextPosition()-1;
-        if(lastPosition==-1) { // if there wasn't any value proposed before there isn't any leader
+        if(currentPosition==0 || log.get(currentPosition-1) == null ||
+                (! log.get(currentPosition-1).isValid() )                 ) {
+                // if there wasn't any value proposed before there isn't any leader
+                // or if the last round didn't succeeded
             writeOperationResult=proposer.proposeValueTwoPhases(cell);
+            if(writeOperationResult)
+                log.append(proposer.getFinalValue(), currentPosition);
             System.out.println("Two Rounds");
         }
         else {
-            String lastPostionsLeaderURL = log.get(lastPosition).getLeaderUrl();
+            String lastPostionsLeaderURL = log.get(currentPosition-1).getLeaderUrl();
             boolean leaderProposalResult = proposer.proposeValueToLeader(lastPostionsLeaderURL, cell);
 
             if (leaderProposalResult) {
                 proposer.proposeValueEnforced(cell, lastPostionsLeaderURL);
+                if(! lastPostionsLeaderURL.equals(proposer.getMegastore().getCurrentUrl()))
+                    log.append(proposer.getFinalValue(), currentPosition);
                 System.out.println("One Round");
             }
             else {
                 writeOperationResult = proposer.proposeValueTwoPhases(cell);
+                if(writeOperationResult)
+                    log.append(proposer.getFinalValue(), currentPosition);
                 System.out.println("Two Rounds");
             }
         }
 
-        log.append(proposer.getFinalValue(), log.getNextPosition());
         currentThread.removeProposer(proposer);
-
         return writeOperationResult;
     }
 
@@ -89,9 +96,8 @@ public class Entity {
         return hash;
     }
 
-
     public void appendToLog(LogCell logCell, int cellNumber) {
-        // this came from another node in the network
+        System.out.println(logCell.getLeaderUrl()+ " -> " +megastore.getCurrentUrl() + " :  " + cellNumber);
         log.append(logCell, cellNumber);
         // TODO also start a thread to write it on disk.
     }
@@ -112,11 +118,16 @@ public class Entity {
             return getLocalLastValue(hash);
         }
         else {
-            String nodeURL = findAnUpToDateNode();
-            updateMissingLogCellsFrom(nodeURL);
+            System.out.println("Catch-up");
+            catchUp();
             megastore.getCoordinator().validate(startingHashPoint);
             return getLocalLastValue(hash);
         }
+    }
+
+    public void catchUp() {
+        String nodeURL = findAnUpToDateNode();
+        updateMissingLogCellsFrom(nodeURL);
     }
 
     private String getLocalLastValue(long hash) {

@@ -20,6 +20,7 @@
     </orderEntry>
     <orderEntry type="module" module-name="Megastore" />
     <orderEntry type="library" name="Mockito" level="project" />
+    <orderEntry type="library" name="commons-lang3-3.3" level="project" />
   </component>
 </module>
 

@@ -11,14 +11,16 @@ import org.junit.Test;
 
 import java.net.Inet4Address;
 import java.net.UnknownHostException;
+import java.util.Hashtable;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Random;
 
 /**
  * Created by George on 11/05/2014.
  */
 public class NetworkMessages {
-    static String  ip () {
+    static String currentIp() {
         try {
             return Inet4Address.getLocalHost().getHostAddress();
         } catch (UnknownHostException e) {
@@ -32,11 +34,11 @@ public class NetworkMessages {
         NetworkManager n1=new NetworkManager(null, "61616");
         NetworkManager n2=new NetworkManager(null, "61617");
 
-        n2.updateNodesFrom(ip()+":61616");
+        n2.updateNodesFrom(currentIp()+":61616");
         List<String> list = n2.getNodesURL();
         Assert.assertTrue(list.size() ==2 &&
-                list.get(0).equals(ip()+":61616")  &&
-                list.get(1).equals(ip()+":61617")  );
+                list.get(0).equals(currentIp()+":61616")  &&
+                list.get(1).equals(currentIp()+":61617")  );
 
         n1.close();
         n2.close();
@@ -45,8 +47,8 @@ public class NetworkMessages {
     @Test
     public void createEntity_putValueTest() {
         Megastore m1=new Megastore("61616");
-        Megastore m2=new Megastore("61617",ip()+":61616");
-        Megastore m3=new Megastore("61618",ip()+":61616");
+        Megastore m2=new Megastore("61617", currentIp()+":61616");
+        Megastore m3=new Megastore("61618", currentIp()+":61616");
 
 
         Entity e=m1.createEntity();
@@ -98,8 +100,8 @@ public class NetworkMessages {
     @Test
     public void createEntity_put_getTest() {
         Megastore m1=new Megastore("61616");
-        Megastore m2=new Megastore("61617",ip()+":61616");
-        Megastore m3=new Megastore("61618",ip()+":61616");
+        Megastore m2=new Megastore("61617", currentIp()+":61616");
+        Megastore m3=new Megastore("61618", currentIp()+":61616");
 
         Entity e=m1.createEntity();
         if(! e.put("white", "cat"))
@@ -122,8 +124,8 @@ public class NetworkMessages {
     @Test
     public void create2Entities_put_getTest() {
         Megastore m1=new Megastore("61616");
-        Megastore m2=new Megastore("61617",ip()+":61616");
-        Megastore m3=new Megastore("61618",ip()+":61616");
+        Megastore m2=new Megastore("61617", currentIp()+":61616");
+        Megastore m3=new Megastore("61618", currentIp()+":61616");
 
         Entity e=m1.createEntity();
         Entity e2=m2.createEntity();
@@ -153,8 +155,8 @@ public class NetworkMessages {
         // we make two megastores: A and B
         // we want to stress B to catchUp from A and then return;
 
-        String urlA=ip()+":61616";
-        String urlB=ip()+":61617";
+        String urlA= currentIp()+":61616";
+        String urlB= currentIp()+":61617";
         List<String> urls=new LinkedList<String>();
         urls.add(urlA);
         urls.add(urlB);
@@ -170,7 +172,7 @@ public class NetworkMessages {
 
         // B contains only a invalid cell.
         Log logB=new Log();
-        logB.append(new UnacceptedLogCell(urlA),0);
+        logB.append(new UnacceptedLogCell(),0);
         Entity e2=new Entity(urls,null,0,logB);
         Megastore B=new Megastore("61617",urlA, getBoxedInaList(e2));
         e2.setMegastore(B);
@@ -189,4 +191,56 @@ public class NetworkMessages {
         return l;
     }
 
+    @Test
+    public void firstFunctionalTest1Entity3Servers_put_get() {
+        Hashtable<String, String> allValues=new Hashtable<String, String>();
+
+        Megastore m1=new Megastore("61616");
+        Megastore m2=new Megastore("61617", currentIp()+":61616");
+        Megastore m3=new Megastore("61618", currentIp()+":61616");
+
+        Entity e=m1.createEntity();
+
+        for(int i=0; i<3000; i++) {
+            System.out.print("i=" + i +"  ");
+            String key=getRandomString(2);
+
+            switch(Integer.parseInt(getNumber(3))) {
+                case  0 :   e=m1.getEntity(0); break;
+                case  1 :   e=m2.getEntity(0); break;
+                case  2 :   e=m3.getEntity(0); break;
+            }
+
+            if ( allValues.get(key) !=null) {
+                System.out.println("value edited");
+                if(! allValues.get(key).equals(e.get(key)))
+                    System.out.println(key+"  expe if(proposer!=null)cted: "+ allValues.get(key) + "   actual:" + e.get(key));
+                Assert.assertTrue(allValues.get(key).equals(e.get(key)));
+            }
+            String newValue=getRandomString(100);
+            allValues.put(key, newValue);
+            while(! e.put(key,newValue)) {}
+
+        }
+
+        m1.close();
+        m2.close();
+        m3.close();
+    }
+
+    private static Random rand = new Random();
+    private String getNumber(int max) {
+            int nr=Math.abs(rand.nextInt())%max;
+            return String.valueOf(nr);
+    }
+
+    private static String getRandomString(int max) {
+        //return RandomStringUtils.randomAlphanumeric(max);
+        String blob="";
+        while(blob.length()<max) {
+            int nr = Math.abs(rand.nextInt());
+            blob+=String.valueOf(nr);
+        }
+        return blob.substring(0,max);
+    }
 }

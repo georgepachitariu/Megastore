@@ -25,7 +25,8 @@ public class AreYouUpToDateMessage extends NetworkMessage {
         entityID=Long.parseLong( messageParts[1] );
         source=messageParts[2];
 
-        if( networkManager.getMegastore().getCoordinator().isUpToDate(entityID) )
+       if( networkManager.getMegastore().getCoordinator().isUpToDate(entityID) )
+        //We changed what up-to-date means: Now it means that if the node has all records valid
             new UpToDateConfirmedMessage(entityID,null, networkManager.getCurrentUrl(),source).send();
     }
 

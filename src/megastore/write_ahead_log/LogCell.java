@@ -1,17 +1,12 @@
 package megastore.write_ahead_log;
 
 public abstract class LogCell {
-    public LogCell(String leaderUrl) {
-        this.leaderUrl = leaderUrl;
+    public LogCell(){
     }
 
-    protected String leaderUrl;
-
-    public String getLeaderUrl() {
-        return leaderUrl;
-    }
+    public abstract String getLeaderUrl();
 
     public abstract String  getValue(long key);
 
-    public abstract boolean isInvalid();
+    public abstract boolean isValid();
 }

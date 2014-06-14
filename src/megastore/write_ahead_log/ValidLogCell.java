@@ -8,17 +8,17 @@ import java.util.List;
  */
 public class ValidLogCell extends LogCell {
     public List<WriteOperation> opList;
+    protected String leaderUrl;
 
     public ValidLogCell(String leaderUrl, List<WriteOperation> opList) {
-        super(leaderUrl);
+        this.leaderUrl = leaderUrl;
         this.opList = opList;
     }
 
     public ValidLogCell(String raw) {
-        super("");
         opList =new LinkedList<WriteOperation>();
         String[] parts = raw.split("`");
-        super.leaderUrl=parts[0];
+        leaderUrl=parts[0];
         for(int i=1; i < parts.length; i++)
             opList.add(new WriteOperation(parts[i]));
     }
@@ -39,6 +39,11 @@ public class ValidLogCell extends LogCell {
         return toString().equals(cell.toString());
     }
 
+    @Override
+    public String getLeaderUrl() {
+        return leaderUrl;
+    }
+
     public String  getValue(long key) {
         for(WriteOperation wr: opList)
             if(wr.key==key)
@@ -46,7 +51,7 @@ public class ValidLogCell extends LogCell {
         return null;
     }
 
-    public boolean isInvalid() {
-        return false;
+    public boolean isValid() {
+        return true;
     }
 }

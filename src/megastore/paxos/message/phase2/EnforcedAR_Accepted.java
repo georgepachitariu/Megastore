@@ -17,12 +17,13 @@ public class EnforcedAR_Accepted extends PaxosAcceptorMessage {
     @Override
     public void act(String[] messageParts) {
         String source=messageParts[3];
-        proposer.addToValueAcceptorsList(source);
+        if(proposer!=null)
+            proposer.addToValueAcceptorsList(source);
     }
 
     @Override
     public String getID() {
-        return "EnforcedAR_Accepted";
+        return "EnforcedARAccepted";
     }
 
     @Override
