@@ -1,21 +1,30 @@
 package megastore.write_ahead_log;
 
+import megastore.Entity;
+import megastore.LogBuffer;
+
 import java.util.LinkedList;
 import java.util.List;
 
 public class Log {
+    private Entity parent;
     private LogCell[] logList;
     public int size;
 
-    public Log() {
+    public Log(Entity parent) {
         logList=new LogCell[10000];
         size =0;
+        this.parent=parent;
     }
 
     public void append(LogCell cell, int cellNumber) {
-        if(logList[cellNumber]!=null && logList[cellNumber].isValid() )
-            System.out.println("We are overwriting on position: "+ cellNumber + " this:" + logList[cellNumber].toString() +
-                                                            "with  " + cell.toString());
+        if(logList[cellNumber]!=null)
+            LogBuffer.println("Node/Position " + parent.getMegastore().getCurrentUrl() + "/" + cellNumber +
+                    "; Old: " + logList[cellNumber] +
+                    "; New: " + cell);
+        else
+            LogBuffer.println("Node/Position: "+parent.getMegastore().getCurrentUrl()+"/"+cellNumber+
+                    "; New: " + cell);
 
         logList[cellNumber] = cell;
         if(size ==cellNumber)
@@ -67,5 +76,9 @@ public class Log {
         if(logList[cellNumber]!=null && logList[cellNumber].isValid())
             return true;
         return false;
+    }
+
+    public void setParent(Entity parent) {
+        this.parent = parent;
     }
 }

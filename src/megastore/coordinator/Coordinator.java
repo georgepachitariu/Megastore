@@ -1,5 +1,7 @@
 package megastore.coordinator;
 
+import megastore.LogBuffer;
+
 import java.util.LinkedList;
 import java.util.List;
 
@@ -32,7 +34,7 @@ public class Coordinator {
         for(EntityState e : entities)
             if(e.entityID == entityID)
                 return e.isValid;
-        System.out.println("EntityID not found");
+        LogBuffer.println("EntityID not found");
         return false;
     }
 

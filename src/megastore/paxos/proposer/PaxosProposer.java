@@ -1,15 +1,16 @@
 package megastore.paxos.proposer;
 
+import megastore.LogBuffer;
 import megastore.Megastore;
 import megastore.coordinator.message.InvalidateKeyMessage;
 import megastore.paxos.acceptor.PaxosAcceptor;
 import megastore.paxos.message.phase1.PrepareRequest;
 import megastore.paxos.message.phase2.AcceptRequest;
 import megastore.paxos.message.phase2.EnforcedAcceptRequest;
-import megastore.paxos.message.phase2.RejectAProposalMessage;
+import megastore.paxos.message.phase2.RejectAccProposalMessage;
+import megastore.write_ahead_log.InvalidLogCell;
 import megastore.write_ahead_log.Log;
 import megastore.write_ahead_log.LogCell;
-import megastore.write_ahead_log.UnacceptedLogCell;
 import megastore.write_ahead_log.ValidLogCell;
 
 import java.util.Collections;
@@ -115,7 +116,7 @@ public class PaxosProposer {
 
     private void sendInvalidationMessages(LinkedList<String> nonResponders) {
         for(String url : nonResponders) {
-            System.out.println(megastore.getCurrentUrl()+ " invalidates "+ url +"  for log-position: " + cellNumber );
+            LogBuffer.println(megastore.getCurrentUrl() + " invalidates " + url + "  for log-position: " + cellNumber);
             if(!url.equals(megastore.getCurrentUrl()))
                 new InvalidateKeyMessage(null, url, entityId).send();
             else
@@ -200,16 +201,16 @@ public class PaxosProposer {
     }
 
     private void invalidateAcceptorsValues(List<String> valueAcceptorsList) {
-        System.out.println("the put operation from " + megastore.getCurrentUrl() +
+        LogBuffer.println("the put operation from " + megastore.getCurrentUrl() +
                 " failed, so we invalidate for position: " + cellNumber);
 
         for(String url : valueAcceptorsList)
             if(! url.equals(megastore.getCurrentUrl()))
-                new RejectAProposalMessage(entityId,cellNumber,null,megastore.getCurrentUrl(),url).send();
+                new RejectAccProposalMessage(entityId,cellNumber,null,megastore.getCurrentUrl(),url).send();
             else {
                 Log log=megastore.getEntity(entityId).getLog();
                 if(log.get(cellNumber) !=null && megastore.getCurrentUrl().equals(log.get(cellNumber).getLeaderUrl()))
-                    log.append(new UnacceptedLogCell(),cellNumber);
+                    log.append(new InvalidLogCell(),cellNumber);
             }
     }
 
@@ -239,11 +240,13 @@ public class PaxosProposer {
             Proposal newProposal = acceptor.getHighestAcceptedProposal(
                     megastore.getNetworkManager(),proposalNumber);
 
-            if(highestPropAcc==null || highestPropAcc.pNumber < newProposal.pNumber )
+            if(newProposal!=null)
                 this.highestPropAcc = newProposal;
+
             return true;
         }
-        else return false;
+        else
+            return false;
     }
 
 

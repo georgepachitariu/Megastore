@@ -3,7 +3,7 @@ package megastore.network.message.paxos_optimisation;
 import megastore.Entity;
 import megastore.network.NetworkManager;
 import megastore.network.message.NetworkMessage;
-import megastore.write_ahead_log.ValidLogCell;
+import megastore.write_ahead_log.LogCell;
 
 import java.util.LinkedList;
 import java.util.List;
@@ -13,11 +13,11 @@ import java.util.List;
  */
 public class LogCellsRequestedMessage extends NetworkMessage {
     private final NetworkManager networkManager;
-    private final List<ValidLogCell> list;
+    private final List<LogCell> list;
     private long entityID;
 
     public LogCellsRequestedMessage(long entityID, NetworkManager networkManager,
-                                    String destination, LinkedList<ValidLogCell> list) {
+                                    String destination, LinkedList<LogCell> list) {
         super(destination);
         this.entityID=entityID;
         this.networkManager=networkManager;
@@ -30,9 +30,9 @@ public class LogCellsRequestedMessage extends NetworkMessage {
 
         Entity entity = networkManager.getMegastore().getEntity(entityID);
 
-        LinkedList<ValidLogCell> list=new LinkedList<ValidLogCell>();
+        LinkedList<LogCell> list=new LinkedList<LogCell>();
         for(int i=2; i<messageParts.length; i++) {
-            ValidLogCell cell= new ValidLogCell(messageParts[i] );
+            LogCell cell= LogCell.createCell(messageParts[i]);
             list.add(cell);
         }
         entity.setNewCells(list);

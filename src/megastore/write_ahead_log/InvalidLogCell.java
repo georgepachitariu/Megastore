@@ -3,8 +3,8 @@ package megastore.write_ahead_log;
 /**
  * Created by George on 13/05/2014.
  */
-public class UnacceptedLogCell extends LogCell{
-    public UnacceptedLogCell() {
+public class InvalidLogCell extends LogCell{
+    public InvalidLogCell() {
     }
 
     @Override
@@ -22,6 +22,14 @@ public class UnacceptedLogCell extends LogCell{
 
     @Override
     public String toString() {
-        return "UnacceptedLogCell";
+        return "InvalidLogCell";
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if(! (obj instanceof InvalidLogCell))
+            return false;
+        else
+            return true;
     }
 }

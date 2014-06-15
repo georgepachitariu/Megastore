@@ -1,7 +1,8 @@
 package megastore.network;
 
 import megastore.Entity;
-import org.junit.Assert;
+import megastore.LogBuffer;
+import megastore.Megastore;
 
 import java.util.Random;
 
@@ -12,21 +13,30 @@ public class DatabaseClient implements Runnable {
     private final Entity entity;
     private final double startingPoint;
 
-    public DatabaseClient(Entity entity, int startingPoint) {
-        this.entity=entity;
+    public DatabaseClient(Megastore megastore, int startingPoint) {
+        try {
+            while(megastore.getEntity(0)==null) {
+                Thread.sleep(10);
+            }
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+        this.entity= megastore.getEntity(0);
         this.startingPoint=startingPoint;
     }
 
     @Override
     public void run() {
-        int iterations=3;
+
+
+        int iterations=10;
         for(int i=0; i<iterations; i++) {
             String key=String.valueOf(startingPoint + i); // getRandomString(2);
             String newValue=String.valueOf(startingPoint+i);  // getRandomString(100);
 
             entity.get(key);
             boolean succeeded=entity.put(key,newValue);
-            System.out.println(//i+"  "+Thread.currentThread().getName() + "  logPos:  " +
+            LogBuffer.println(//i+"  "+Thread.currentThread().getName() + "  logPos:  " +
                    /* (entity.getLog().getNextPosition()-1) + "  succeded?: " +*/ succeeded + "\n\n");
 
             if(!succeeded)
@@ -37,7 +47,11 @@ public class DatabaseClient implements Runnable {
             String key=String.valueOf(startingPoint+i); // getRandomString(2);
             String newValue=String.valueOf(startingPoint+i);  // getRandomString(100);
 
-            Assert.assertTrue(newValue.equals(entity.get(key)));
+            if(entity.get(key) == null || (! newValue.equals(entity.get(key)))) {
+                System.out.println("1 read Error");
+             //  System.out.print(LogBuffer.getAsString());
+              //  System.out.print("Error");
+            }
         }
 
     }

@@ -1,5 +1,6 @@
 package megastore.network;
 
+import megastore.LogBuffer;
 import megastore.coordinator.message.InvalidateKeyMessage;
 import megastore.network.message.AvailableNodesMessage;
 import megastore.network.message.IntroductionMessage;
@@ -10,6 +11,7 @@ import megastore.network.message.paxos_optimisation.LogCellsRequestedMessage;
 import megastore.network.message.paxos_optimisation.RequestValidLogCellsMessage;
 import megastore.network.message.paxos_optimisation.UpToDateConfirmedMessage;
 import megastore.paxos.acceptor.PaxosAcceptor;
+import megastore.paxos.message.NullMessage;
 import megastore.paxos.message.PaxosAcceptorMessage;
 import megastore.paxos.message.PaxosProposerMessage;
 import megastore.paxos.message.phase1.PrepReqAccepted;
@@ -76,7 +78,7 @@ public class ListeningThread  implements Runnable  {
         knownProposerMessages =new LinkedList<PaxosProposerMessage>();
         knownProposerMessages.add(new PrepareRequest(-1, -1, networkManager, null, null, -1));
         knownProposerMessages.add(new AcceptRequest(-1, -1, networkManager, null, null, null));
-        knownProposerMessages.add(new RejectAProposalMessage(-1,-1,networkManager,null,null));
+        knownProposerMessages.add(new RejectAccProposalMessage(-1,-1,networkManager,null,null));
         knownProposerMessages.add(new EnforcedAcceptRequest(-1, -1, networkManager, null, null, null));
     }
 
@@ -90,6 +92,7 @@ public class ListeningThread  implements Runnable  {
         knownNetworkMessages.add(new UpToDateConfirmedMessage(-1,networkManager,null,null));
         knownNetworkMessages.add(new RequestValidLogCellsMessage(-1,networkManager,null,null,null,-1));
         knownNetworkMessages.add(new LogCellsRequestedMessage(-1,networkManager,null,null));
+        knownNetworkMessages.add(new NullMessage(null));
     }
 
     public void addProposer(PaxosProposer paxosProposer) {
@@ -122,7 +125,7 @@ public class ListeningThread  implements Runnable  {
                 boolean recognized = treatMessage(parts);
 
                 if (! recognized )
-                    System.out.println("Network Message Not Recognized");
+                    LogBuffer.println("Network Message Not Recognized");
 
             } catch (IOException e) {
                 e.printStackTrace();
@@ -134,6 +137,11 @@ public class ListeningThread  implements Runnable  {
                     e.printStackTrace();
                 }
             }
+        }
+        try {
+            serverSocket.close();
+        } catch (IOException e) {
+            e.printStackTrace();
         }
     }
 
@@ -195,6 +203,7 @@ public class ListeningThread  implements Runnable  {
 
     public void stopThread() {
         isAlive = false;
+        new NullMessage(getCurrentUrl()).send();
     }
 
     public String getCurrentUrl() {

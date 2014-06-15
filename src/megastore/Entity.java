@@ -24,7 +24,10 @@ public class Entity {
 
 
     public Entity(List<String> nodesURL, Megastore megastore, long startingHashPoint) {
-        this(nodesURL,megastore,startingHashPoint,new Log());
+        this.startingHashPoint = startingHashPoint;
+        this.megastore=megastore;
+        this.nodesURL=nodesURL;
+        this.log=new Log(this);
     }
 
     public Entity(List<String> nodesURL, Megastore megastore, long startingHashPoint, Log log) {
@@ -54,7 +57,7 @@ public class Entity {
             writeOperationResult=proposer.proposeValueTwoPhases(cell);
             if(writeOperationResult)
                 log.append(proposer.getFinalValue(), currentPosition);
-            System.out.println("Two Rounds");
+            LogBuffer.println("Two Rounds");
         }
         else {
             String lastPostionsLeaderURL = log.get(currentPosition-1).getLeaderUrl();
@@ -64,13 +67,13 @@ public class Entity {
                 proposer.proposeValueEnforced(cell, lastPostionsLeaderURL);
                 if(! lastPostionsLeaderURL.equals(proposer.getMegastore().getCurrentUrl()))
                     log.append(proposer.getFinalValue(), currentPosition);
-                System.out.println("One Round");
+                LogBuffer.println("One Round");
             }
             else {
                 writeOperationResult = proposer.proposeValueTwoPhases(cell);
                 if(writeOperationResult)
                     log.append(proposer.getFinalValue(), currentPosition);
-                System.out.println("Two Rounds");
+                LogBuffer.println("Two Rounds");
             }
         }
 
@@ -97,7 +100,6 @@ public class Entity {
     }
 
     public void appendToLog(LogCell logCell, int cellNumber) {
-        System.out.println(logCell.getLeaderUrl()+ " -> " +megastore.getCurrentUrl() + " :  " + cellNumber);
         log.append(logCell, cellNumber);
         // TODO also start a thread to write it on disk.
     }
@@ -118,7 +120,7 @@ public class Entity {
             return getLocalLastValue(hash);
         }
         else {
-            System.out.println("Catch-up");
+            LogBuffer.println("Catch-up on node: " + megastore.getCurrentUrl());
             catchUp();
             megastore.getCoordinator().validate(startingHashPoint);
             return getLocalLastValue(hash);
@@ -142,13 +144,14 @@ public class Entity {
             return value;
     }
 
-    private LinkedList<ValidLogCell> newCells;
+    private LinkedList<LogCell> newCells;
     private void updateMissingLogCellsFrom( String nodeURL) {
         newCells=null;
 
+        int currentSize=log.getNextPosition();
         List<Integer> invalidPositions=log.getInvalidPositions();
         new RequestValidLogCellsMessage(startingHashPoint, null,
-                megastore.getCurrentUrl(), nodeURL, invalidPositions,log.getNextPosition()).send();
+                megastore.getCurrentUrl(), nodeURL, invalidPositions,currentSize).send();
 
         try {
             do {
@@ -161,8 +164,8 @@ public class Entity {
         for(int i=0; i<invalidPositions.size(); i++) {
             log.append(newCells.get(i), invalidPositions.get(i));
         }
-        for(int i=log.getNextPosition(); i<newCells.size(); i++) {
-            log.append(newCells.get(i), log.getNextPosition());
+        for(int i=invalidPositions.size(), j=0; i<newCells.size(); i++, j++) {
+            log.append(newCells.get(i), currentSize+j);
         }
     }
 
@@ -192,11 +195,15 @@ public class Entity {
             upToDateNode =source;
     }
 
-    public void setNewCells(LinkedList<ValidLogCell> list) {
+    public void setNewCells(LinkedList<LogCell> list) {
         newCells=list;
     }
 
     public void setMegastore(Megastore megastore) {
         this.megastore = megastore;
+    }
+
+    public Megastore getMegastore() {
+        return megastore;
     }
 }

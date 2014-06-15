@@ -2,8 +2,8 @@ package megastore.network;
 
 import megastore.Entity;
 import megastore.Megastore;
+import megastore.write_ahead_log.InvalidLogCell;
 import megastore.write_ahead_log.Log;
-import megastore.write_ahead_log.UnacceptedLogCell;
 import megastore.write_ahead_log.ValidLogCell;
 import megastore.write_ahead_log.WriteOperation;
 import org.junit.Assert;
@@ -162,18 +162,20 @@ public class NetworkMessages {
         urls.add(urlB);
 
         // A contains two log cells with values
-        Log logA=new Log();
+        Log logA=new Log(null);
         logA.append(new ValidLogCell(urlA,getWriteListWith(5922/*hash("white")*/,"cat")),0);
         logA.append(new ValidLogCell(urlA,getWriteListWith(2345L,"dog")),1);
         Entity e1=new Entity(urls,null,0,logA);
+        logA.setParent(e1);
         Megastore A=new Megastore("61616",getBoxedInaList(e1));
         e1.setMegastore(A);
         A.getCoordinator().addEntity(0);
 
         // B contains only a invalid cell.
-        Log logB=new Log();
-        logB.append(new UnacceptedLogCell(),0);
+        Log logB=new Log(null);
+        logB.append(new InvalidLogCell(),0);
         Entity e2=new Entity(urls,null,0,logB);
+        logB.setParent(e2);
         Megastore B=new Megastore("61617",urlA, getBoxedInaList(e2));
         e2.setMegastore(B);
         B.getCoordinator().addEntity(0);

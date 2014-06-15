@@ -78,7 +78,7 @@ public class Megastore {
                 entityFound=true;
             }
         if(! entityFound)
-            System.out.println("Entity not found");
+            LogBuffer.println("Entity not found");
     }
 
     public Entity getEntity(long entityId) {

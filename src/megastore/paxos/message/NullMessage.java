@@ -1,11 +1,13 @@
 package megastore.paxos.message;
 
+import megastore.network.message.NetworkMessage;
+
 /**
  * Created by George on 02/05/2014.
  */
-public class NullMessage extends PaxosAcceptorMessage {
+public class NullMessage extends NetworkMessage {
     public NullMessage(String destinationURL) {
-        super(null, destinationURL,0,0);
+        super(destinationURL);
     }
 
     @Override
@@ -14,11 +16,11 @@ public class NullMessage extends PaxosAcceptorMessage {
 
     @Override
     public String getID() {
-        return "";
+        return "NullMessage";
     }
 
     @Override
     protected String toMessage() {
-        return "";
+        return getID();
     }
 }

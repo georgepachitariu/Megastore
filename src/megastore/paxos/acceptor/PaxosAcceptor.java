@@ -38,11 +38,6 @@ public class PaxosAcceptor {
         return highestPropNumberAcc;
     }
 
-    public void cleanUp() {
-        highestPropAcc=null;
-        highestPropNumberAcc=-1;
-    }
-
     public boolean isTheRightSession(long entityId, int cellNumber) {
         return (entityId == this.entityId) && (cellNumber == this.cellNumber);
     }
@@ -54,7 +49,7 @@ public class PaxosAcceptor {
         // highestPropAcc may be null
         if(highestPropAcc == null) {
             LogCell cell = networkManager.getMegastore().getEntity(entityId).getLog().get(cellNumber);
-            if((cell!=null) && (cell instanceof ValidLogCell))
+            if((cell!=null) && cell.isValid())
                 highestPropAcc=new Proposal((ValidLogCell)cell,propNumber+1);
         }
         return highestPropAcc;

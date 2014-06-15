@@ -13,12 +13,13 @@ import java.util.List;
 public class NetworkManager {
     private Megastore megastore;
     private ListeningThread listeningThread;
+    private final Thread runThread;
     private List<String> nodesURL;
 
     public NetworkManager(Megastore megastore, String port) {
         this.megastore=megastore;
         listeningThread = new ListeningThread(this, port);
-        Thread runThread = new Thread(listeningThread);
+        runThread = new Thread(listeningThread);
         runThread.setDaemon(false);
         runThread.start();
 
@@ -54,6 +55,11 @@ public class NetworkManager {
 
     public void close() {
         listeningThread.stopThread();
+        try {
+            runThread.join();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
     }
 
     public void addNode(String source) {

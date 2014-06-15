@@ -9,4 +9,11 @@ public abstract class LogCell {
     public abstract String  getValue(long key);
 
     public abstract boolean isValid();
+
+    public static LogCell createCell(String raw) {
+        if(raw.equals("InvalidLogCell"))
+            return new InvalidLogCell();
+        else
+            return new ValidLogCell(raw);
+    }
 }

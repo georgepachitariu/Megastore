@@ -3,16 +3,16 @@ package megastore.paxos.message.phase2;
 import megastore.network.NetworkManager;
 import megastore.paxos.message.PaxosProposerMessage;
 import megastore.write_ahead_log.Log;
-import megastore.write_ahead_log.UnacceptedLogCell;
+import megastore.write_ahead_log.InvalidLogCell;
 
 /**
  * Created by George on 14/06/2014.
  */
-public class RejectAProposalMessage extends PaxosProposerMessage {
+public class RejectAccProposalMessage extends PaxosProposerMessage {
     private String sourceURL;
 
-    public RejectAProposalMessage(long entityId, int cellNumber, NetworkManager networkManager,
-                                  String sourceURL, String destinationURL) {
+    public RejectAccProposalMessage(long entityId, int cellNumber, NetworkManager networkManager,
+                                    String sourceURL, String destinationURL) {
         super(networkManager,destinationURL,entityId,cellNumber);
         this.sourceURL=sourceURL;
     }
@@ -26,12 +26,12 @@ public class RejectAProposalMessage extends PaxosProposerMessage {
 
         Log log=networkManager.getMegastore().getEntity(entityId).getLog();
         if(log.get(cellNumber) !=null && source.equals(log.get(cellNumber).getLeaderUrl()))
-            log.append(new UnacceptedLogCell(),cellNumber);
+            log.append(new InvalidLogCell(),cellNumber);
     }
 
     @Override
     public String getID() {
-        return "AcceptRequest";
+        return "RejectAccProposalMessage";
     }
 
     @Override
