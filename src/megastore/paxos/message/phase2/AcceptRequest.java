@@ -27,21 +27,21 @@ public class AcceptRequest extends PaxosProposerMessage {
         Proposal prop = new Proposal( messageParts[3] );
         String source= messageParts[4];
 
-        // unless it has already responded to a prepare request having a number greater than n.
-        // and we didn't used that log position
-        if ( (!networkManager.isLogPosOccupied(entityId, cellNumber)) &&
-                //TODO make a way for him to realize that
-                (acceptor.getHighestPropNumberAcc() < prop.pNumber)) {
-            // it accepts the proposal
-            acceptor.setHighestPropAcc(prop);
-            acceptor.setHighestPropNumberAcc(prop.pNumber);
-            networkManager.writeFinalValueOnLog(entityId, cellNumber, prop.value); //we also set the final value
-            new AR_Accepted(entityId, cellNumber, null, networkManager.getCurrentUrl(), source, prop.pNumber).send();
-        }
-        else {
-            // it sends a denial message
-            //networkManager.writeUnacceptedValueOnLog(entityId, cellNumber, source);// we write the unaccepted value on log [I don't understand why]
-            new AR_Rejected(entityId, cellNumber,null, networkManager.getCurrentUrl(), source,  prop.pNumber).send();
+        synchronized (networkManager) {
+            // unless it has already responded to a prepare request having a number greater than n.
+            // and we didn't used that log position
+            if ((!networkManager.isLogPosOccupied(entityId, cellNumber)) &&
+                    //TODO make a way for him to realize that
+                    (acceptor.getHighestPropNumberAcc() < prop.pNumber)) {
+                // it accepts the proposal
+                acceptor.setHighestPropAcc(prop);
+                acceptor.setHighestPropNumberAcc(prop.pNumber);
+                networkManager.writeValueOnLog(entityId, cellNumber, prop.value); //we also set the final value
+                new AR_Accepted(entityId, cellNumber, null, networkManager.getCurrentUrl(), source, prop.pNumber).send();
+            } else {
+                // it sends a denial message
+                new AR_Rejected(entityId, cellNumber, null, networkManager.getCurrentUrl(), source, prop.pNumber).send();
+            }
         }
     }
 

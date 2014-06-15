@@ -55,8 +55,6 @@ public class Entity {
                 // if there wasn't any value proposed before there isn't any leader
                 // or if the last round didn't succeeded
             writeOperationResult=proposer.proposeValueTwoPhases(cell);
-            if(writeOperationResult)
-                log.append(proposer.getFinalValue(), currentPosition);
             LogBuffer.println("Two Rounds");
         }
         else {
@@ -65,14 +63,10 @@ public class Entity {
 
             if (leaderProposalResult) {
                 proposer.proposeValueEnforced(cell, lastPostionsLeaderURL);
-                if(! lastPostionsLeaderURL.equals(proposer.getMegastore().getCurrentUrl()))
-                    log.append(proposer.getFinalValue(), currentPosition);
                 LogBuffer.println("One Round");
             }
             else {
                 writeOperationResult = proposer.proposeValueTwoPhases(cell);
-                if(writeOperationResult)
-                    log.append(proposer.getFinalValue(), currentPosition);
                 LogBuffer.println("Two Rounds");
             }
         }

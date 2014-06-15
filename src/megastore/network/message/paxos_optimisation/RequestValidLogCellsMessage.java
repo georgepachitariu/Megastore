@@ -4,7 +4,6 @@ import megastore.network.NetworkManager;
 import megastore.network.message.NetworkMessage;
 import megastore.write_ahead_log.Log;
 import megastore.write_ahead_log.LogCell;
-import megastore.write_ahead_log.ValidLogCell;
 
 import java.util.LinkedList;
 import java.util.List;
@@ -42,8 +41,9 @@ public class RequestValidLogCellsMessage extends NetworkMessage {
             int pos=Integer.parseInt( messageParts[i] );
             list.add( log.get(pos) );
         }
-        for(int pos=logSize; pos<log.getNextPosition(); pos++)
+        for(int pos=logSize; pos<log.getNextPosition(); pos++) {
             list.add(log.get(pos));
+        }
 
         new LogCellsRequestedMessage(entityID, null,source, list).send();
     }

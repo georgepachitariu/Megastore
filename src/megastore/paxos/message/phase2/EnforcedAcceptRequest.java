@@ -26,7 +26,7 @@ public class EnforcedAcceptRequest extends PaxosProposerMessage {
         ValidLogCell value = new ValidLogCell( messageParts[3] );
         String source= messageParts[4];
 
-        networkManager.writeFinalValueOnLog(entityId, cellNumber, value); //we also set the final value
+        networkManager.writeValueOnLog(entityId, cellNumber, value); //we also set the final value
         new EnforcedAR_Accepted(entityId, cellNumber, null, networkManager.getCurrentUrl(), source).send();
     }
 

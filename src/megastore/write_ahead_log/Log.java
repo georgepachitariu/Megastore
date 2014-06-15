@@ -18,64 +18,79 @@ public class Log {
     }
 
     public void append(LogCell cell, int cellNumber) {
-        if(logList[cellNumber]!=null)
-            LogBuffer.println("Node/Position " + parent.getMegastore().getCurrentUrl() + "/" + cellNumber +
-                    "; Old: " + logList[cellNumber] +
-                    "; New: " + cell);
-        else
-            LogBuffer.println("Node/Position: "+parent.getMegastore().getCurrentUrl()+"/"+cellNumber+
-                    "; New: " + cell);
+        synchronized (this) {
+            if (logList[cellNumber] != null)
+                LogBuffer.println("Node/Position " + parent.getMegastore().getCurrentUrl() + "/" + cellNumber +
+                        "; Old: " + logList[cellNumber] +
+                        "; New: " + cell);
+            else
+                LogBuffer.println("Node/Position: " + parent.getMegastore().getCurrentUrl() + "/" + cellNumber +
+                        "; New: " + cell);
 
-        logList[cellNumber] = cell;
-        if(size ==cellNumber)
-            size++;
-        if(size <cellNumber)
-            size =cellNumber+1;
+            logList[cellNumber] = cell;
+
+            if (size == cellNumber)
+                size++;
+            if (size < cellNumber)
+                size = cellNumber + 1;
+        }
     }
 
     public int getNextPosition() {
-        return size;
+        synchronized (this) {
+            return size;
+        }
     }
 
     public LogCell get(int i) {
-        return logList[i];
+        synchronized (this) {
+            return logList[i];
+        }
     }
 
     public String getLastValueOf(long key) {
-        for(int i= size -1; i>=0; i--) {
-            if(logList[i]!=null) {
-                String val = logList[i].getValue(key);
-                if (val != null)
-                    return val;
+        synchronized (this) {
+            for (int i = size - 1; i >= 0; i--) {
+                if (logList[i] != null) {
+                    String val = logList[i].getValue(key);
+                    if (val != null)
+                        return val;
+                }
             }
+            return null;
         }
-        return null;
     }
 
     public List<Integer> getInvalidPositions() {
-        LinkedList<Integer> invalidPositions=new LinkedList<Integer>();
-        for(int i=0; i< size; i++) {
-            if(logList[i]==null || (! logList[i].isValid()))
-                invalidPositions.add(i);
+        synchronized (this) {
+            LinkedList<Integer> invalidPositions = new LinkedList<Integer>();
+            for (int i = 0; i < size; i++) {
+                if (logList[i] == null || (!logList[i].isValid()))
+                    invalidPositions.add(i);
+            }
+            return invalidPositions;
         }
-        return invalidPositions;
     }
 
     @Override
     public String toString() {
-        String blob="";
-        for(int i= size; i>=0; i--) {
-            if(logList[i]!=null) {
-                blob+=logList[i].toString();
+        synchronized (this) {
+            String blob = "";
+            for (int i = size; i >= 0; i--) {
+                if (logList[i] != null) {
+                    blob += logList[i].toString();
+                }
             }
+            return blob;
         }
-        return blob;
     }
 
     public boolean isOccupied(int cellNumber) {
-        if(logList[cellNumber]!=null && logList[cellNumber].isValid())
-            return true;
-        return false;
+        synchronized (this) {
+            if (logList[cellNumber] != null && logList[cellNumber].isValid())
+                return true;
+            return false;
+        }
     }
 
     public void setParent(Entity parent) {

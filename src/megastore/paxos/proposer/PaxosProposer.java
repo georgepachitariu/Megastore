@@ -75,7 +75,7 @@ public class PaxosProposer {
 
         if(! olderLeaderUrl.equals(megastore.getCurrentUrl())) {
             // We also have to put on the local node and then add it to the list
-            megastore.getNetworkManager().writeFinalValueOnLog(entityId, cellNumber, value);
+            megastore.getNetworkManager().writeValueOnLog(entityId, cellNumber, value);
             valueAcceptorsList.add(megastore.getCurrentUrl());
         }
 
@@ -93,7 +93,7 @@ public class PaxosProposer {
                 nrOfAcceptors = valueAcceptorsList.size();
                 allParticipants = nodesURL.size();
             } while(nrOfAcceptors <= allParticipants/2); //production code
-           // } while (nrOfAcceptors < allParticipants);// my test code
+            // } while (nrOfAcceptors < allParticipants);// my test code
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
@@ -106,8 +106,8 @@ public class PaxosProposer {
     private void invalidateNonResponders() {
         //for the rest of them I have to remove them from the Coordinator
         LinkedList<String> nonResponders = new LinkedList<String>();
-            for(String item: nodesURL)
-                nonResponders.add(new String(item));
+        for(String item: nodesURL)
+            nonResponders.add(new String(item));
 
         nonResponders.removeAll(valueAcceptorsList);
 
@@ -148,11 +148,11 @@ public class PaxosProposer {
                 allParticipants = nodesURL.size();
 
                 if(nrOfRejectors>(allParticipants-1)/2) //prod code
-                //if(nrOfRejectors>0) //test code
+                    //if(nrOfRejectors>0) //test code
                     return false; // we will never have a majority so we return;
 
             } while(nrOfAcceptors <= allParticipants/2); //production code
-          //  } while (nrOfAcceptors < allParticipants);// my test code
+            //  } while (nrOfAcceptors < allParticipants);// my test code
 
             // Phase 2
             ////////////////////
@@ -161,6 +161,7 @@ public class PaxosProposer {
             // our value or another one. Even if it's not ours, we continue because
             // we want to achieve consensus on all the nodes.
 
+            valueAcceptorsList.clear();
             proposalRejectorsList.clear();
 
             createAcceptProposal(value);
@@ -183,10 +184,10 @@ public class PaxosProposer {
                     // if(nrOfRejectors>0)  // test code
                     invalidateAcceptorsValues(valueAcceptorsList);
                     return false; // we will never have a majority so we return;
-            }
+                }
 
             } while(nrOfAcceptors <= allParticipants/2); //production code
-           //  } while (nrOfAcceptors < allParticipants);// my test code
+            //  } while (nrOfAcceptors < allParticipants);// my test code
 
             //for the rest of them I have to remove them from the Coordinator
             invalidateNonResponders();
@@ -226,7 +227,7 @@ public class PaxosProposer {
                 (acceptor.getHighestPropNumberAcc() < highestPropAcc.pNumber)) {
             acceptor.setHighestPropAcc(highestPropAcc);
             acceptor.setHighestPropNumberAcc(highestPropAcc.pNumber);
-            megastore.getNetworkManager().writeFinalValueOnLog(entityId, cellNumber, highestPropAcc.value); //we also set the final value
+            megastore.getNetworkManager().writeValueOnLog(entityId, cellNumber, highestPropAcc.value); //we also set the final value
             return true;
         }
         else {
@@ -285,8 +286,10 @@ public class PaxosProposer {
         }
     }
 
-    public boolean isOurValueProposed (Object value) {
-        return (highestPropAcc==null);
+    public boolean isOurValueProposed (LogCell value) {
+        if (highestPropAcc==null || (! value.equals(highestPropAcc.value)) )
+            return true;
+        return false;
     }
 
     private void computeProposalNumber() {

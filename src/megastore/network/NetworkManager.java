@@ -78,7 +78,7 @@ public class NetworkManager {
         return listeningThread.getCurrentUrl();
     }
 
-    public void writeFinalValueOnLog(long entityId, int cellNumber, LogCell value) {
+    public void writeValueOnLog(long entityId, int cellNumber, LogCell value) {
         megastore.append(entityId, cellNumber, value);
     }
 
