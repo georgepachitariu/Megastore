@@ -8,6 +8,9 @@ import megastore.write_ahead_log.Log;
 import megastore.write_ahead_log.LogCell;
 import megastore.write_ahead_log.ValidLogCell;
 import megastore.write_ahead_log.WriteOperation;
+import systemlog.LogBuffer;
+import systemlog.SystemLog;
+import systemlog.SystemLogCell;
 
 import java.util.LinkedList;
 import java.util.List;
@@ -50,12 +53,16 @@ public class Entity {
         ValidLogCell cell = createLogCell(hash, value);
 //      Accept Leader: Ask the leader to accept the value as proposal number zero.
 //      The leader is the node that succeded the last write.
+///*
+
         if(currentPosition==0 || log.get(currentPosition-1) == null ||
                 (! log.get(currentPosition-1).isValid() )                 ) {
+//*/
                 // if there wasn't any value proposed before there isn't any leader
                 // or if the last round didn't succeeded
             writeOperationResult=proposer.proposeValueTwoPhases(cell);
-            LogBuffer.println("Two Rounds");
+            SystemLog.add(new SystemLogCell(megastore.getCurrentUrl(), "Two Rounds"));
+///*
         }
         else {
             String lastPostionsLeaderURL = log.get(currentPosition-1).getLeaderUrl();
@@ -63,13 +70,14 @@ public class Entity {
 
             if (leaderProposalResult) {
                 proposer.proposeValueEnforced(cell, lastPostionsLeaderURL);
-                LogBuffer.println("One Round");
+                SystemLog.add(new SystemLogCell(megastore.getCurrentUrl(), "One Round"));
             }
             else {
                 writeOperationResult = proposer.proposeValueTwoPhases(cell);
-                LogBuffer.println("Two Rounds");
+                SystemLog.add(new SystemLogCell(megastore.getCurrentUrl(), "Two Rounds"));
             }
         }
+        //*/
 
         currentThread.removeProposer(proposer);
         return writeOperationResult;
@@ -123,11 +131,12 @@ public class Entity {
 
     public void catchUp() {
         String nodeURL = findAnUpToDateNode();
-        updateMissingLogCellsFrom(nodeURL);
+        if(nodeURL !=null)
+            updateMissingLogCellsFrom(nodeURL);
     }
 
     private String getLocalLastValue(long hash) {
-        // read the highest accepted log position and timestamp from the local replica.
+        // read the highest accepted systemlog position and timestamp from the local replica.
         String value=log.getLastValueOf(hash);
         if(value == null) {
             // it means that there weren't modifications in the near past for that key and so
@@ -173,10 +182,12 @@ public class Entity {
                         megastore.getCurrentUrl(), url).send();
         }
 
+        long time=System.currentTimeMillis();
         try {
             do {
                 Thread.sleep(3);
-            } while(upToDateNode==null);
+            } while(upToDateNode==null &&
+                    System.currentTimeMillis()-time<200);
         } catch (InterruptedException e) {
             e.printStackTrace();
         }

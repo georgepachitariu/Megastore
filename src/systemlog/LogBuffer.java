@@ -1,4 +1,4 @@
-package megastore;
+package systemlog;
 
 /**
  * Created by George on 15/06/2014.

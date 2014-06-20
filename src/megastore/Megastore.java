@@ -1,5 +1,6 @@
 package megastore;
 
+import systemlog.LogBuffer;
 import megastore.coordinator.Coordinator;
 import megastore.network.ListeningThread;
 import megastore.network.NetworkManager;

@@ -1,7 +1,7 @@
 package megastore.write_ahead_log;
 
 import megastore.Entity;
-import megastore.LogBuffer;
+import systemlog.LogBuffer;
 
 import java.util.LinkedList;
 import java.util.List;
@@ -12,7 +12,7 @@ public class Log {
     public int size;
 
     public Log(Entity parent) {
-        logList=new LogCell[10000];
+        logList=new LogCell[30000];
         size =0;
         this.parent=parent;
     }

@@ -2,6 +2,7 @@ package megastore.network.message.paxos_optimisation;
 
 import megastore.network.NetworkManager;
 import megastore.network.message.NetworkMessage;
+import megastore.write_ahead_log.InvalidLogCell;
 import megastore.write_ahead_log.Log;
 import megastore.write_ahead_log.LogCell;
 
@@ -39,10 +40,16 @@ public class RequestValidLogCellsMessage extends NetworkMessage {
         LinkedList<LogCell> list=new LinkedList<LogCell>();
         for(int i=4; i<messageParts.length; i++) {
             int pos=Integer.parseInt( messageParts[i] );
-            list.add( log.get(pos) );
+            LogCell cell = log.get(pos);
+            if(cell == null)
+                cell=new InvalidLogCell();
+            list.add(cell);
         }
         for(int pos=logSize; pos<log.getNextPosition(); pos++) {
-            list.add(log.get(pos));
+            LogCell cell = log.get(pos);
+            if(cell == null)
+                cell=new InvalidLogCell();
+            list.add(cell);
         }
 
         new LogCellsRequestedMessage(entityID, null,source, list).send();

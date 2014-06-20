@@ -6,7 +6,7 @@ import java.net.Socket;
 /**
  * Created by George on 01/05/2014.
  */
-public abstract class NetworkMessage {
+public abstract class NetworkMessage implements Runnable {
 
     protected String destinationIP;
     private  int destinationPort;
@@ -19,7 +19,8 @@ public abstract class NetworkMessage {
         }
     }
 
-    public void send() {
+    @Override
+    public void run() {
         Socket socket=null;
         try {
             socket= new Socket(destinationIP, destinationPort);
@@ -39,6 +40,11 @@ public abstract class NetworkMessage {
                 e.printStackTrace();
             }
         }
+    }
+
+    public void send() {
+        Thread t = new Thread(this);
+        t.start();
     }
 
     public abstract void act(String[] messageParts);

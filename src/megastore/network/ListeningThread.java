@@ -1,6 +1,6 @@
 package megastore.network;
 
-import megastore.LogBuffer;
+import systemlog.LogBuffer;
 import megastore.coordinator.message.InvalidateKeyMessage;
 import megastore.network.message.AvailableNodesMessage;
 import megastore.network.message.IntroductionMessage;
@@ -44,11 +44,13 @@ public class ListeningThread  implements Runnable  {
     private List<PaxosAcceptorMessage> knownAcceptorMessages;
 
     private ServerSocket serverSocket;
+    private MessageResponderThread messageResponderThread;
 
     public ListeningThread(NetworkManager networkManager, String port) {
         proposingSessionsOpen=new LinkedList<PaxosProposer>();
         acceptingSessionsOpen=new LinkedList<PaxosAcceptor>();
         this.networkManager=networkManager;
+        messageResponderThread=new MessageResponderThread();
 
         try {
             serverSocket = new ServerSocket(Integer.parseInt(port));
@@ -106,6 +108,14 @@ public class ListeningThread  implements Runnable  {
             try {
                 clientSocket = serverSocket.accept();
 
+                ////////////////////////////////////////////////
+                try {
+                    Thread.sleep(30);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+                /////////////////////////////////////////////
+
                 InputStream inputStream = clientSocket.getInputStream();
                 while(inputStream.available()==0) {
                     try {
@@ -148,7 +158,7 @@ public class ListeningThread  implements Runnable  {
     private boolean treatMessage(String[] parts) {
         for(NetworkMessage m : knownNetworkMessages) {
             if (m.getID().equals(parts[0])) {
-                m.act(parts);
+                messageResponderThread.addInFront(m,parts);
                 return true;
             }
         }
@@ -159,7 +169,11 @@ public class ListeningThread  implements Runnable  {
         for(PaxosProposerMessage m : knownProposerMessages) {
             if (m.getID().equals(parts[2])) {
                 m.setAcceptor(session);
-                m.act(parts);
+                if(m.getID().equals("EnforcedAcceptRequest") ||
+                        m.getID().equals("AcceptRequest") )
+                    messageResponderThread.addInFront(m,parts);
+                else
+                    messageResponderThread.addBehind(m,parts);
                 return true;
             }
         }
@@ -172,7 +186,7 @@ public class ListeningThread  implements Runnable  {
                     //sometimes a majority has been achieved (of acceptors or rejectors)
                     // before some messages (like this one) have arrived
                     // so the proposer doesn't exist anymore
-                    m.act(parts);
+                    messageResponderThread.addBehind(m,parts);
                 }
                 return true;
             }

@@ -1,6 +1,6 @@
 package megastore.coordinator;
 
-import megastore.LogBuffer;
+import systemlog.LogBuffer;
 
 import java.util.LinkedList;
 import java.util.List;

@@ -1,4 +1,4 @@
-package megastore.network;
+package experiment;
 
 import megastore.Entity;
 import megastore.Megastore;
@@ -17,7 +17,7 @@ public class PerformanceTestTransactionNumber {
     @Test
     public void firstFunctionalTest1Entity3Servers_put_get() {
 
-        for (int g = 15; g < 40; g=g+3) {
+        for (int g = 100; g < 170; g=g+10) {
             System.out.println(((int)(0.05*g)+(int)(0.1*g)+(int)(0.85*g)) + "   Operations per second");
 
             Megastore m1 = new Megastore("61616");
@@ -26,11 +26,10 @@ public class PerformanceTestTransactionNumber {
 
             Entity e = m1.createEntity();
 
-            int experimentDuration = 7; // in seconds
-            TestDatabaseClient c1 = new TestDatabaseClient(m1, 0, (int)(0.05*g), experimentDuration);
-            TestDatabaseClient c2 = new TestDatabaseClient(m2, 500, (int)(0.1*g), experimentDuration);
-            TestDatabaseClient c3 = new TestDatabaseClient(m3, 1000, (int)(0.85*g), experimentDuration);
-
+            int experimentDuration = 25; // in seconds
+            DatabaseClient c1 = new DatabaseClient(m1, 0, (int)(0.05*g), experimentDuration);
+            DatabaseClient c2 = new DatabaseClient(m2, 500, (int)(0.1*g), experimentDuration);
+            DatabaseClient c3 = new DatabaseClient(m3, 1000, (int)(0.85*g), experimentDuration);
 
             Thread t1 = new Thread(c1, "Client 1");
             Thread t2 = new Thread(c2, "Client 2");
@@ -49,10 +48,10 @@ public class PerformanceTestTransactionNumber {
             }
 
             LogAnalyzer analyzer = new LogAnalyzer();
-            analyzer.divideLog();
-            analyzer.showMedianPerfomanceTimes();
+      //      analyzer.divideLog();
+          //  analyzer.showMedianPerfomanceTimes();
           //  analyzer.countTheMethodsUsedForEachWrite();
-          //  analyzer.printNrOfSuccessesAndFailuresPerSecond();
+            analyzer.printNrOfSuccessesAndFailuresPerSecond();
 
             SystemLog.clear();
 

@@ -161,7 +161,7 @@ public class NetworkMessages {
         urls.add(urlA);
         urls.add(urlB);
 
-        // A contains two log cells with values
+        // A contains two systemlog cells with values
         Log logA=new Log(null);
         logA.append(new ValidLogCell(urlA,getWriteListWith(5922/*hash("white")*/,"cat")),0);
         logA.append(new ValidLogCell(urlA,getWriteListWith(2345L,"dog")),1);
