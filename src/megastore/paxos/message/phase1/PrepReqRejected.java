@@ -21,7 +21,7 @@ public class PrepReqRejected extends PaxosAcceptorMessage {
         String source = messageParts[3];
         int number = Integer.parseInt( messageParts[4] );
 
-        proposer.addProposalRejector(source);
+        proposer.addPrepareRequestRejector(source);
     }
 
     @Override

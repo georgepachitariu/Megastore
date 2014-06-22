@@ -24,7 +24,7 @@ public class PrepReqAcceptedWithProp extends PaxosAcceptorMessage {
             proposer.setHighestPropAcc( prop );
         }
 
-        proposer.addNodeAsAcceptorOfProposal(source);
+        proposer.addPrepareRequestAcceptor(source);
     }
 
     @Override

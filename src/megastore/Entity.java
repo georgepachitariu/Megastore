@@ -53,31 +53,26 @@ public class Entity {
         ValidLogCell cell = createLogCell(hash, value);
 //      Accept Leader: Ask the leader to accept the value as proposal number zero.
 //      The leader is the node that succeded the last write.
-///*
+
+        String lastPostionsLeaderURL;
 
         if(currentPosition==0 || log.get(currentPosition-1) == null ||
-                (! log.get(currentPosition-1).isValid() )                 ) {
-//*/
-                // if there wasn't any value proposed before there isn't any leader
-                // or if the last round didn't succeeded
-            writeOperationResult=proposer.proposeValueTwoPhases(cell);
-            SystemLog.add(new SystemLogCell(megastore.getCurrentUrl(), "Two Rounds"));
-///*
+                (! log.get(currentPosition-1).isValid() )  )
+            lastPostionsLeaderURL=megastore.getNetworkManager().getNodesURL().get(0);
+        else
+            lastPostionsLeaderURL = log.get(currentPosition-1).getLeaderUrl();
+
+//        boolean leaderProposalResult = proposer.proposeValueToLeader(lastPostionsLeaderURL, cell);
+        boolean leaderProposalResult=false; //to disable optimisation
+
+        if (leaderProposalResult) {
+            proposer.proposeValueEnforced(cell, lastPostionsLeaderURL);
+            SystemLog.add(new SystemLogCell(megastore.getCurrentUrl(), "One Round"));
         }
         else {
-            String lastPostionsLeaderURL = log.get(currentPosition-1).getLeaderUrl();
-            boolean leaderProposalResult = proposer.proposeValueToLeader(lastPostionsLeaderURL, cell);
-
-            if (leaderProposalResult) {
-                proposer.proposeValueEnforced(cell, lastPostionsLeaderURL);
-                SystemLog.add(new SystemLogCell(megastore.getCurrentUrl(), "One Round"));
-            }
-            else {
-                writeOperationResult = proposer.proposeValueTwoPhases(cell);
-                SystemLog.add(new SystemLogCell(megastore.getCurrentUrl(), "Two Rounds"));
-            }
+            writeOperationResult = proposer.proposeValueTwoPhases(cell);
+            SystemLog.add(new SystemLogCell(megastore.getCurrentUrl(), "Two Rounds"));
         }
-        //*/
 
         currentThread.removeProposer(proposer);
         return writeOperationResult;
@@ -158,7 +153,8 @@ public class Entity {
 
         try {
             do {
-                Thread.sleep(3);
+                if(newCells==null)
+                    Thread.sleep(3);
             } while(newCells==null);
         } catch (InterruptedException e) {
             e.printStackTrace();
@@ -185,7 +181,8 @@ public class Entity {
         long time=System.currentTimeMillis();
         try {
             do {
-                Thread.sleep(3);
+                if(upToDateNode==null)
+                    Thread.sleep(3);
             } while(upToDateNode==null &&
                     System.currentTimeMillis()-time<200);
         } catch (InterruptedException e) {

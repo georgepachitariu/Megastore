@@ -36,7 +36,7 @@ public class ValidLogCell extends LogCell {
         if(! (obj instanceof ValidLogCell))
             return false;
         ValidLogCell cell=(ValidLogCell)obj;
-        return toString().equals(cell.toString());
+        return opList.equals(cell.opList);
     }
 
     @Override
@@ -53,5 +53,9 @@ public class ValidLogCell extends LogCell {
 
     public boolean isValid() {
         return true;
+    }
+
+    public void setLeaderUrl(String leaderUrl) {
+        this.leaderUrl = leaderUrl;
     }
 }

@@ -8,11 +8,11 @@ import megastore.write_ahead_log.InvalidLogCell;
 /**
  * Created by George on 14/06/2014.
  */
-public class RejectAccProposalMessage extends PaxosProposerMessage {
+public class InvalidateAcceptorMessage extends PaxosProposerMessage {
     private String sourceURL;
 
-    public RejectAccProposalMessage(long entityId, int cellNumber, NetworkManager networkManager,
-                                    String sourceURL, String destinationURL) {
+    public InvalidateAcceptorMessage(long entityId, int cellNumber, NetworkManager networkManager,
+                                     String sourceURL, String destinationURL) {
         super(networkManager,destinationURL,entityId,cellNumber);
         this.sourceURL=sourceURL;
     }
@@ -31,7 +31,7 @@ public class RejectAccProposalMessage extends PaxosProposerMessage {
 
     @Override
     public String getID() {
-        return "RejectAccProposalMessage";
+        return "InvalidateAcceptorMessage";
     }
 
     @Override

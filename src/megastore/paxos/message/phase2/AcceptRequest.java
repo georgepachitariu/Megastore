@@ -20,6 +20,7 @@ public class AcceptRequest extends PaxosProposerMessage {
 
     @Override
     public void act(String[] messageParts) {
+
         //    (b) If an acceptor receives an accept request for a proposal numbered n,
         entityId=Long.parseLong( messageParts[0] );
         cellNumber=Integer.parseInt( messageParts[1] );
@@ -27,7 +28,6 @@ public class AcceptRequest extends PaxosProposerMessage {
         Proposal prop = new Proposal( messageParts[3] );
         String source= messageParts[4];
 
-        synchronized (networkManager) {
             // unless it has already responded to a prepare request having a number greater than n.
             // and we didn't used that systemlog position
             if ((!networkManager.isLogPosOccupied(entityId, cellNumber)) &&
@@ -42,7 +42,6 @@ public class AcceptRequest extends PaxosProposerMessage {
                 // it sends a denial message
                 new AR_Rejected(entityId, cellNumber, null, networkManager.getCurrentUrl(), source, prop.pNumber).send();
             }
-        }
     }
 
     @Override

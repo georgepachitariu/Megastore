@@ -11,6 +11,7 @@ public class LogAnalyzer {
 
     public LogAnalyzer() {
         this.log=SystemLog.log;
+        divideLog();
     }
 
     public void printNrOfSuccessesAndFailuresPerSecond() {
@@ -114,27 +115,30 @@ public class LogAnalyzer {
                 OperationLogCell nextCell=(OperationLogCell) splittedLog[i].get(j+1);
 
                 if(cell.message.equals("Two Rounds")) {
-                    if (nextCell.succeeded)
-                        twoPhaseSuccess.add((int)nextCell.duration);
-                    else
-                        twoPhaseFailed.add((int)nextCell.duration);
+                    if (nextCell.succeeded) {
+                        System.out.println("Succeeded: read: "+nextCell.readDuration +"\twrite: "  + nextCell.writeDuration);
+///                        twoPhaseSuccess.add((int) nextCell.duration);
+                    }
+                  else
+                        System.out.println("Failed: read: "+nextCell.readDuration +"\twrite: "  + nextCell.writeDuration);
+ /*                       twoPhaseFailed.add((int)nextCell.duration);
                 }
                 else
-                if(cell.message.equals("One Round")) {
+       *//*         if(cell.message.equals("One Round")) {
                     if (nextCell.succeeded) {
-                        onePhaseSuccess.add((int) nextCell.duration);
-         //               System.out.println(nextCell.duration);
+                    //    onePhaseSuccess.add((int) nextCell.duration);
+                        System.out.println("read: "+nextCell.readDuration +"\twrite: "  + nextCell.writeDuration);
                     }
-                    else
+  */   /*               else
                         onePhaseFailed.add((int)nextCell.duration);
-                }
+     */           }
             }
         }
 
-
+        System.out.println("\n\n\n\n\n\n\n\n");
   //      System.out.println("Two Phase Paxos Succeeded Avg Time: "+ getAvg(twoPhaseSuccess));
   //      System.out.println("Two Phase Paxos Failed Avg Time: "+ getAvg(twoPhaseFailed));
-        System.out.println("One Phase Paxos Succeeded Avg Time: "+ getAvg(onePhaseSuccess));
+//        System.out.println("One Phase Paxos Succeeded Avg Time: "+ getAvg(onePhaseSuccess));
  //       System.out.println("One Phase Paxos Failed Avg Time: "+ getAvg(onePhaseFailed));
     }
 

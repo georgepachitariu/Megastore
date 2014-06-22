@@ -20,14 +20,14 @@ public class MessageResponderThread implements Runnable {
     }
 
     public void addInFront(NetworkMessage n, String[] input) {
-/*        synchronized (priorityQueue) {
+        synchronized (priorityQueue) {
             priorityQueue.push(n);
             inputs.push(input);
-        }*/
-        synchronized (priorityQueue) {
+        }
+/*        synchronized (priorityQueue) {
             priorityQueue.add(n);
             inputs.add(input);
-        }
+        }*/
 
         startThreadIfNotAlive();
     }

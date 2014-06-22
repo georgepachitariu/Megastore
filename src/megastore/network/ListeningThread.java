@@ -80,7 +80,7 @@ public class ListeningThread  implements Runnable  {
         knownProposerMessages =new LinkedList<PaxosProposerMessage>();
         knownProposerMessages.add(new PrepareRequest(-1, -1, networkManager, null, null, -1));
         knownProposerMessages.add(new AcceptRequest(-1, -1, networkManager, null, null, null));
-        knownProposerMessages.add(new RejectAccProposalMessage(-1,-1,networkManager,null,null));
+        knownProposerMessages.add(new InvalidateAcceptorMessage(-1,-1,networkManager,null,null));
         knownProposerMessages.add(new EnforcedAcceptRequest(-1, -1, networkManager, null, null, null));
     }
 
@@ -158,7 +158,7 @@ public class ListeningThread  implements Runnable  {
     private boolean treatMessage(String[] parts) {
         for(NetworkMessage m : knownNetworkMessages) {
             if (m.getID().equals(parts[0])) {
-                messageResponderThread.addInFront(m,parts);
+                messageResponderThread.addInFront(m, parts);
                 return true;
             }
         }
@@ -169,8 +169,7 @@ public class ListeningThread  implements Runnable  {
         for(PaxosProposerMessage m : knownProposerMessages) {
             if (m.getID().equals(parts[2])) {
                 m.setAcceptor(session);
-                if(m.getID().equals("EnforcedAcceptRequest") ||
-                        m.getID().equals("AcceptRequest") )
+                if(m.getID().equals("EnforcedAcceptRequest")  )
                     messageResponderThread.addInFront(m,parts);
                 else
                     messageResponderThread.addBehind(m,parts);
@@ -186,7 +185,7 @@ public class ListeningThread  implements Runnable  {
                     //sometimes a majority has been achieved (of acceptors or rejectors)
                     // before some messages (like this one) have arrived
                     // so the proposer doesn't exist anymore
-                    messageResponderThread.addBehind(m,parts);
+                    messageResponderThread.addBehind(m, parts);
                 }
                 return true;
             }

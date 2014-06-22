@@ -25,7 +25,7 @@ public class AR_Accepted  extends PaxosAcceptorMessage {
 
     @Override
     public String getID() {
-        return "ARAccepted";
+        return "AR_Accepted";
     }
 
     @Override

@@ -15,7 +15,7 @@ public class PrepReqAccepted extends PaxosAcceptorMessage {
     public void act(String[] messageParts) {
         String source = messageParts[3];
 
-        proposer.addNodeAsAcceptorOfProposal(source);
+        proposer.addPrepareRequestAcceptor(source);
     }
 
     @Override

@@ -1,3 +1,4 @@
+/*
 package experiment;
 
 import megastore.Entity;
@@ -9,9 +10,11 @@ import systemlog.SystemLog;
 import java.net.Inet4Address;
 import java.net.UnknownHostException;
 
+*/
 /**
  * Created by George on 10/06/2014.
- */
+ *//*
+
 public class PerformanceTestTransactionNumber {
 
     @Test
@@ -73,3 +76,4 @@ public class PerformanceTestTransactionNumber {
     }
 
 }
+*/

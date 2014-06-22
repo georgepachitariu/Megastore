@@ -31,7 +31,7 @@ public class NetworkManager {
         new IntroductionMessage(this, listeningThread.getCurrentUrl(), nodeUrl).send();
         while(nodesURL.size() == 1l) {
             try {
-                Thread.sleep(10);
+                Thread.sleep(2);
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }

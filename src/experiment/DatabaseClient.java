@@ -1,3 +1,4 @@
+/*
 package experiment;
 
 import megastore.Entity;
@@ -7,9 +8,11 @@ import systemlog.SystemLog;
 
 import java.util.Random;
 
+*/
 /**
  * Created by George on 10/06/2014.
- */
+ *//*
+
 public class DatabaseClient implements Runnable {
     private final Entity entity;
     private final int startingPoint;
@@ -45,13 +48,16 @@ public class DatabaseClient implements Runnable {
 
             long before = System.currentTimeMillis();
             entity.get(key);
+            long afterRead = System.currentTimeMillis();
             boolean succeeded = entity.put(key, newValue);
             long after = System.currentTimeMillis();
 
-            SystemLog.add(new OperationLogCell(nodeUrl, after - before, succeeded, before));
+            SystemLog.add(new OperationLogCell(nodeUrl, afterRead - before,after-afterRead, succeeded, before));
 
 //        LogBuffer.println(//i+"  "+Thread.currentThread().getName() + "  logPos:  " +
-            //            /* (entity.getLog().getNextPosition()-1) + "  succeded?: " +*/ succeeded + "\n\n");
+            //            */
+/* (entity.getLog().getNextPosition()-1) + "  succeded?: " +*//*
+ succeeded + "\n\n");
 
             timeToWait-=(after - before);
             if(timeToWait<0)
@@ -68,7 +74,8 @@ public class DatabaseClient implements Runnable {
         }
     }
 
-    /*
+    */
+/*
     *        for(int i=0; i<iterations; i++) {
             String key=String.valueOf(startingPoint+i); // getRandomString(2);
             String newValue=String.valueOf(startingPoint+i);  // getRandomString(100);
@@ -79,7 +86,8 @@ public class DatabaseClient implements Runnable {
          //      System.out.print("Error");
             }
         }
-    * */
+    * *//*
+
 
     private static Random rand = new Random();
     private static String getRandomString(int max) {
@@ -93,3 +101,4 @@ public class DatabaseClient implements Runnable {
     }
 
 }
+*/

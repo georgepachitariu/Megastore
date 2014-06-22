@@ -4,13 +4,15 @@ package systemlog;
  * Created by George on 17/06/2014.
  */
 public class OperationLogCell extends LogCell {
-    public final long duration;
     public final boolean succeeded;
     public final long timestamp;
+    public final long readDuration;
+    public final long writeDuration;
 
-    public OperationLogCell(String nodeUrl, long duration, boolean succeeded, long timestamp) {
+    public OperationLogCell(String nodeUrl, long readDuration, long writeDuration, boolean succeeded, long timestamp) {
         super(nodeUrl);
-        this.duration=duration;
+        this.readDuration=readDuration;
+        this.writeDuration=writeDuration;
         this.succeeded=succeeded;
         this.timestamp = timestamp;
     }
