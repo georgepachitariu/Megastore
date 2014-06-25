@@ -1,5 +1,6 @@
 package systemlog;
 
+import java.util.Collections;
 import java.util.LinkedList;
 
 /**
@@ -53,7 +54,7 @@ public class LogAnalyzer {
     public void divideLog() {
         LinkedList<String> urls=new LinkedList<String>();
 
-        for(int i=0; i<20 && log.size()>i; i++)
+        for(int i=0; i<100 && log.size()>i; i++)
             if(log.get(i) instanceof OperationLogCell) {
                 OperationLogCell cell=(OperationLogCell)log.get(i);
                 if(! urls.contains(cell.nodeUrl))
@@ -104,6 +105,7 @@ public class LogAnalyzer {
 
 
     public void showMedianPerfomanceTimes() {
+
         LinkedList<Integer> twoPhaseSuccess=new LinkedList<Integer>();
         LinkedList<Integer> twoPhaseFailed=new LinkedList<Integer>();
         LinkedList<Integer> onePhaseSuccess=new LinkedList<Integer>();
@@ -116,38 +118,78 @@ public class LogAnalyzer {
 
                 if(cell.message.equals("Two Rounds")) {
                     if (nextCell.succeeded) {
-                        System.out.println("Succeeded: read: "+nextCell.readDuration +"\twrite: "  + nextCell.writeDuration);
-///                        twoPhaseSuccess.add((int) nextCell.duration);
+                        //System.out.println("Two rounds Succeeded: read: "+nextCell.readDuration +"\twrite: "  + nextCell.writeDuration);
+                        twoPhaseSuccess.add((int) (nextCell.readDuration + nextCell.writeDuration));
                     }
-                  else
-                        System.out.println("Failed: read: "+nextCell.readDuration +"\twrite: "  + nextCell.writeDuration);
- /*                       twoPhaseFailed.add((int)nextCell.duration);
+                    else {
+                        twoPhaseFailed.add((int) (nextCell.readDuration + nextCell.writeDuration));
+                        //System.out.println("Two rounds Failed: read: " + nextCell.readDuration + "\twrite: " + nextCell.writeDuration);
+                    }
                 }
                 else
-       *//*         if(cell.message.equals("One Round")) {
+                if(cell.message.equals("One Round")) {
                     if (nextCell.succeeded) {
-                    //    onePhaseSuccess.add((int) nextCell.duration);
-                        System.out.println("read: "+nextCell.readDuration +"\twrite: "  + nextCell.writeDuration);
+                        onePhaseSuccess.add((int) (nextCell.readDuration+nextCell.writeDuration));
+                        //System.out.println("OneRound Succeeded read: "+nextCell.readDuration +"\twrite: "  + nextCell.writeDuration);
                     }
-  */   /*               else
-                        onePhaseFailed.add((int)nextCell.duration);
-     */           }
+                    else {
+                        onePhaseFailed.add((int) (nextCell.readDuration + nextCell.writeDuration));
+                        //System.out.println("OneRound Failed read: " + nextCell.readDuration + "\twrite: " + nextCell.writeDuration);
+                    }
+                }
             }
         }
 
-        System.out.println("\n\n\n\n\n\n\n\n");
-  //      System.out.println("Two Phase Paxos Succeeded Avg Time: "+ getAvg(twoPhaseSuccess));
-  //      System.out.println("Two Phase Paxos Failed Avg Time: "+ getAvg(twoPhaseFailed));
-//        System.out.println("One Phase Paxos Succeeded Avg Time: "+ getAvg(onePhaseSuccess));
- //       System.out.println("One Phase Paxos Failed Avg Time: "+ getAvg(onePhaseFailed));
+        System.out.println("Two Phase Paxos Succeeded Avg Time: "+ getAvg(twoPhaseSuccess));
+        System.out.println("Two Phase Paxos Failed Avg Time: "+ getAvg(twoPhaseFailed));
+        System.out.println("One Phase Paxos Succeeded Avg Time: "+ getAvg(onePhaseSuccess));
+        System.out.println("One Phase Paxos Failed Avg Time: "+ getAvg(onePhaseFailed));
+    }
+
+    public void removeFirst3SecondsFromDividedLog() {
+        long untilTime=((OperationLogCell) splittedLog[0].get(1)).timestamp+3000;
+        for(int i=0; i<splittedLog.length; i++) {
+            if(splittedLog[i].size()>0)
+                continue;
+            while(true) {
+                SystemLogCell cell = (SystemLogCell) splittedLog[i].get(0);
+                OperationLogCell nextCell = (OperationLogCell) splittedLog[i].get(1);
+                if(nextCell.timestamp<untilTime && splittedLog[i].size()>0) {
+                    splittedLog[i].poll();  // we throw away in pairs
+                    splittedLog[i].poll();
+                }
+                else {
+                    break;
+                }
+            }
+        }
     }
 
 
     private float getAvg(LinkedList<Integer> list) {
+        Collections.sort(list);
         int sum=0;
-        for(int x : list)
-            sum+=x;
-        return (float)sum/list.size();
+        for(int x : list) {
+            sum += x;
+            System.out.println("waiting time:  " +x );
+        }
+            return (float)sum/list.size();
     }
 
+
+    public void showMedianWaitingTimes() {
+        LinkedList<Integer> list=new LinkedList<Integer>();
+
+        for(int i=0; i<splittedLog.length; i++) {
+            for(int j=0; j<splittedLog[i].size(); j=j+2) {
+                if(! (splittedLog[i].get(j+1) instanceof OperationLogCell))
+                    j++;
+                OperationLogCell nextCell=(OperationLogCell) splittedLog[i].get(j+1);
+                if (nextCell.succeeded) {
+                    list.add((int) (nextCell.timeToWaitForCompletion));
+                }
+            }
+        }
+        System.out.println("median waiting time Avg Time: "+ getAvg(list));
+    }
 }

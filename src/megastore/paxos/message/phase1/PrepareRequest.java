@@ -28,7 +28,7 @@ public class PrepareRequest extends PaxosProposerMessage {
         Proposal highestPropAcc = acceptor.getHighestPropAcc();
         int highestPropNumberAcc = acceptor.getHighestPropNumberAcc();
 
-        if(highestPropNumberAcc <= propNumber) {
+        if(highestPropNumberAcc < propNumber) {
             //promise not to accept any more proposals numbered less than n
             acceptor.setHighestPropNumberAcc(propNumber);
 
@@ -37,7 +37,7 @@ public class PrepareRequest extends PaxosProposerMessage {
             if(highestPropAcc == null) {
                 LogCell cell = networkManager.getMegastore().getEntity(entityId).getLog().get(cellNumber);
                 if((cell!=null) && (cell instanceof ValidLogCell))
-                    highestPropAcc=new Proposal((ValidLogCell)cell,propNumber+1);
+                    highestPropAcc=new Proposal((ValidLogCell)cell,propNumber);
             }
             if(highestPropAcc != null) {
                 new PrepReqAcceptedWithProp(entityId,cellNumber,null, networkManager.getCurrentUrl(),

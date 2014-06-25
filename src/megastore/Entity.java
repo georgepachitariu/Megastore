@@ -24,12 +24,14 @@ public class Entity {
     private List<String> nodesURL;
     private Log log;
     private Megastore megastore;
+    private boolean readyForNextWriteOperation;
 
 
     public Entity(List<String> nodesURL, Megastore megastore, long startingHashPoint) {
         this.startingHashPoint = startingHashPoint;
         this.megastore=megastore;
         this.nodesURL=nodesURL;
+        readyForNextWriteOperation=true;
         this.log=new Log(this);
     }
 
@@ -37,19 +39,22 @@ public class Entity {
         this.startingHashPoint = startingHashPoint;
         this.megastore=megastore;
         this.nodesURL=nodesURL;
+        readyForNextWriteOperation=true;
         this.log=log;
     }
 
+    public void blockNextOperation() {
+        readyForNextWriteOperation=false;
+    }
 
     public boolean put( String key, String value) {
-
         long hash=getHashValue(key);
         int currentPosition=log.getNextPosition();
         PaxosProposer proposer=new PaxosProposer(startingHashPoint, currentPosition, megastore, nodesURL);
         ListeningThread currentThread=megastore.getThread();
         currentThread.addProposer(proposer);
 
-        boolean writeOperationResult = true;
+        boolean writeOperationResult;
         ValidLogCell cell = createLogCell(hash, value);
 //      Accept Leader: Ask the leader to accept the value as proposal number zero.
 //      The leader is the node that succeded the last write.
@@ -62,11 +67,12 @@ public class Entity {
         else
             lastPostionsLeaderURL = log.get(currentPosition-1).getLeaderUrl();
 
-//        boolean leaderProposalResult = proposer.proposeValueToLeader(lastPostionsLeaderURL, cell);
-        boolean leaderProposalResult=false; //to disable optimisation
+        boolean leaderProposalResult = proposer.proposeValueToLeader(lastPostionsLeaderURL, cell); //also comment this
+    //    boolean leaderProposalResult=false; //to disable optimisation
 
         if (leaderProposalResult) {
-            proposer.proposeValueEnforced(cell, lastPostionsLeaderURL);
+           // readyForNextWriteOperation=true;
+            writeOperationResult = proposer.proposeValueEnforced(cell, lastPostionsLeaderURL);
             SystemLog.add(new SystemLogCell(megastore.getCurrentUrl(), "One Round"));
         }
         else {
@@ -75,6 +81,9 @@ public class Entity {
         }
 
         currentThread.removeProposer(proposer);
+
+        readyForNextWriteOperation=true;
+
         return writeOperationResult;
     }
 
@@ -207,5 +216,9 @@ public class Entity {
 
     public Megastore getMegastore() {
         return megastore;
+    }
+
+    public boolean isReadyForNextWriteOperation() {
+        return readyForNextWriteOperation;
     }
 }

@@ -31,7 +31,6 @@ public class AcceptRequest extends PaxosProposerMessage {
             // unless it has already responded to a prepare request having a number greater than n.
             // and we didn't used that systemlog position
             if ((!networkManager.isLogPosOccupied(entityId, cellNumber)) &&
-                    //TODO make a way for him to realize that
                     (acceptor.getHighestPropNumberAcc() <= prop.pNumber)) {
                 // it accepts the proposal
                 acceptor.setHighestPropAcc(prop);

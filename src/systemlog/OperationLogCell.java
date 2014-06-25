@@ -8,13 +8,16 @@ public class OperationLogCell extends LogCell {
     public final long timestamp;
     public final long readDuration;
     public final long writeDuration;
+    public final long timeToWaitForCompletion;
 
-    public OperationLogCell(String nodeUrl, long readDuration, long writeDuration, boolean succeeded, long timestamp) {
+    public OperationLogCell(String nodeUrl, long readDuration,
+                            long writeDuration, boolean succeeded, long timestamp, long timeToWaitForCompletion) {
         super(nodeUrl);
         this.readDuration=readDuration;
         this.writeDuration=writeDuration;
         this.succeeded=succeeded;
         this.timestamp = timestamp;
+        this.timeToWaitForCompletion=timeToWaitForCompletion;
     }
 
     @Override

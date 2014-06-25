@@ -26,13 +26,13 @@ public class EnforcedAcceptRequest extends PaxosProposerMessage {
         ValidLogCell value = new ValidLogCell( messageParts[3] );
         String source= messageParts[4];
 
-    //    if (!networkManager.isLogPosOccupied(entityId, cellNumber)) {
+        if (!networkManager.isLogPosOccupied(entityId, cellNumber)) {
             networkManager.writeValueOnLog(entityId, cellNumber, value); //we also set the final value
             new EnforcedAR_Accepted(entityId, cellNumber, null, networkManager.getCurrentUrl(), source).send();
-     //   }
-   /*     else
+        }
+        else
             new EnforcedAR_Rejected(entityId, cellNumber, null, networkManager.getCurrentUrl(), source).send();
-*/
+
     }
 
 

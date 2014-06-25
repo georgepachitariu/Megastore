@@ -1,5 +1,4 @@
-/*
-package experiment;
+package experiments;
 
 import megastore.Entity;
 import megastore.Megastore;
@@ -10,29 +9,27 @@ import systemlog.SystemLog;
 import java.net.Inet4Address;
 import java.net.UnknownHostException;
 
-*/
 /**
  * Created by George on 10/06/2014.
- *//*
-
-public class PerformanceTestTransactionNumber {
+ */
+public class Experiment {
 
     @Test
-    public void firstFunctionalTest1Entity3Servers_put_get() {
+    public void experiment1() {
 
-        for (int g = 100; g < 170; g=g+10) {
-            System.out.println(((int)(0.05*g)+(int)(0.1*g)+(int)(0.85*g)) + "   Operations per second");
+        for (int g = 1; g < 17; g=g+2) {
+            System.out.println(((0.05*g)+(0.1*g)+(0.85*g)) + "   Operations per second");
 
             Megastore m1 = new Megastore("61616");
             Megastore m2 = new Megastore("61617", currentIp() + ":61616");
             Megastore m3 = new Megastore("61618", currentIp() + ":61616");
 
             Entity e = m1.createEntity();
-
             int experimentDuration = 25; // in seconds
-            DatabaseClient c1 = new DatabaseClient(m1, 0, (int)(0.05*g), experimentDuration);
-            DatabaseClient c2 = new DatabaseClient(m2, 500, (int)(0.1*g), experimentDuration);
-            DatabaseClient c3 = new DatabaseClient(m3, 1000, (int)(0.85*g), experimentDuration);
+
+            AutomatedDBClient c1 = new AutomatedDBClient(m1, 0, (0.05*g), experimentDuration);
+            AutomatedDBClient c2 = new AutomatedDBClient(m2, 500, (0.1*g), experimentDuration);
+            AutomatedDBClient c3 = new AutomatedDBClient(m3, 1000, (0.85*g), experimentDuration);
 
             Thread t1 = new Thread(c1, "Client 1");
             Thread t2 = new Thread(c2, "Client 2");
@@ -51,12 +48,15 @@ public class PerformanceTestTransactionNumber {
             }
 
             LogAnalyzer analyzer = new LogAnalyzer();
-      //      analyzer.divideLog();
-          //  analyzer.showMedianPerfomanceTimes();
-          //  analyzer.countTheMethodsUsedForEachWrite();
-            analyzer.printNrOfSuccessesAndFailuresPerSecond();
+            analyzer.removeFirst3SecondsFromDividedLog();
 
+          //  analyzer.showMedianPerfomanceTimes();
+            analyzer.showMedianWaitingTimes();
+            //analyzer.countTheMethodsUsedForEachWrite();
+            analyzer.printNrOfSuccessesAndFailuresPerSecond();
             SystemLog.clear();
+
+            System.out.print("\n\n");
 
           //  System.out.print(SystemLog.getAsString());
 
@@ -76,4 +76,3 @@ public class PerformanceTestTransactionNumber {
     }
 
 }
-*/
