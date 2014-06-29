@@ -1,6 +1,5 @@
 package systemlog;
 
-import java.util.Collections;
 import java.util.LinkedList;
 
 /**
@@ -66,7 +65,7 @@ public class LogAnalyzer {
             splittedLog[i]=new LinkedList<LogCell>();
 
         for(LogCell cell : log)
-            splittedLog[urls.indexOf(cell.getNode())].add(cell);
+            splittedLog[urls.indexOf(cell.nodeUrl)].add(cell);
     }
 
     public void countTheMethodsUsedForEachWrite() {
@@ -76,7 +75,8 @@ public class LogAnalyzer {
         int onePhaseFailed=0;
 
         for(int i=0; i<splittedLog.length; i++) {
-            for(int j=0; j<splittedLog[i].size(); j=j+2) {
+            for(int j=0; j+1<splittedLog[i].size(); j=j+2) {
+
                 SystemLogCell cell=(SystemLogCell)splittedLog[i].get(j);
                 OperationLogCell opCell=(OperationLogCell) splittedLog[i].get(j+1);
 
@@ -167,13 +167,13 @@ public class LogAnalyzer {
 
 
     private float getAvg(LinkedList<Integer> list) {
-        Collections.sort(list);
+        //     Collections.sort(list);
         int sum=0;
         for(int x : list) {
             sum += x;
-            System.out.println("waiting time:  " +x );
+//            System.out.println("waiting time:  " +x );
         }
-            return (float)sum/list.size();
+        return (float)sum/list.size();
     }
 
 
@@ -181,15 +181,25 @@ public class LogAnalyzer {
         LinkedList<Integer> list=new LinkedList<Integer>();
 
         for(int i=0; i<splittedLog.length; i++) {
-            for(int j=0; j<splittedLog[i].size(); j=j+2) {
-                if(! (splittedLog[i].get(j+1) instanceof OperationLogCell))
-                    j++;
-                OperationLogCell nextCell=(OperationLogCell) splittedLog[i].get(j+1);
-                if (nextCell.succeeded) {
-                    list.add((int) (nextCell.timeToWaitForCompletion));
+            for(int j=0; j<splittedLog[i].size(); j++) {
+                if(splittedLog[i].get(j) instanceof OperationLogCell) {
+                    OperationLogCell nextCell = (OperationLogCell) splittedLog[i].get(j);
+                    if (nextCell.succeeded) {
+                        list.add((int) (nextCell.timeToWaitForCompletion));
+                    }
                 }
             }
         }
         System.out.println("median waiting time Avg Time: "+ getAvg(list));
+    }
+
+    public void printInfoAboutOperations() {
+        for (LogCell cell : log) {
+            if (cell instanceof OperationLogCell) {
+                OperationLogCell nextCell = (OperationLogCell) cell;
+                System.out.println(nextCell.nodeUrl+" / "+nextCell.value+ "| Succ: " +nextCell.succeeded+
+                        " | Waiting time:  " +nextCell.timeToWaitForCompletion + " | reading time: "+ nextCell.readDuration);
+            }
+        }
     }
 }

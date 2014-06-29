@@ -69,7 +69,7 @@ public class AutomatedDBClient implements Runnable {
                 String key = String.valueOf(startingPoint + i);
                 String newValue = String.valueOf(startingPoint + i);
 
-                while(threadList.size()>=10) {
+                while(threadList.size()>=1) { //TODO change it back to 10
                     try {
                         Thread.sleep(2);
                     } catch (InterruptedException e) {
@@ -77,7 +77,7 @@ public class AutomatedDBClient implements Runnable {
                     }
                 }
 
-                Thread t=new Thread(new WritingOperationThread(this,entity,
+                Thread t=new Thread(new ClientWriteOpThread(this,entity,
                         key,newValue, nodeUrl, creationTimestamp));
                 t.start();
                 threadList.add(t);

@@ -10,7 +10,4 @@ public abstract class LogCell {
         this.nodeUrl=nodeUrl;
     }
 
-    public String getNode() {
-        return nodeUrl;
-    }
 }

@@ -1,5 +1,6 @@
 package experiments;
 
+import megastore.DBWriteOp;
 import megastore.Entity;
 import systemlog.OperationLogCell;
 import systemlog.SystemLog;
@@ -7,7 +8,7 @@ import systemlog.SystemLog;
 /**
  * Created by George on 25/06/2014.
  */
-public class WritingOperationThread implements Runnable {
+public class ClientWriteOpThread implements Runnable {
 
     private final Entity entity;
     private final AutomatedDBClient client;
@@ -16,8 +17,8 @@ public class WritingOperationThread implements Runnable {
     private final String nodeUrl;
     private final long creationTimestamp;
 
-    public WritingOperationThread(AutomatedDBClient client, Entity e, String key, String newValue,
-                                  String nodeUrl, long creationTimestamp) {
+    public ClientWriteOpThread(AutomatedDBClient client, Entity e, String key, String newValue,
+                               String nodeUrl, long creationTimestamp) {
         this.client = client;
         this.entity = e;
         this.key = key;
@@ -35,10 +36,10 @@ public class WritingOperationThread implements Runnable {
             long before = System.currentTimeMillis();
             entity.get(key);
             long afterRead = System.currentTimeMillis();
-            succeeded = entity.put(key, newValue);
+            succeeded = new DBWriteOp(entity,key,newValue).execute();
             long after = System.currentTimeMillis();
 
-            SystemLog.add(new OperationLogCell(nodeUrl, afterRead - before,
+            SystemLog.add(new OperationLogCell(nodeUrl, newValue, afterRead - before,
                     after - afterRead, succeeded, before, after - creationTimestamp));
 
         } while (!succeeded);

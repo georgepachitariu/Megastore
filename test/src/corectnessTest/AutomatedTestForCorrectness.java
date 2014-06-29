@@ -24,7 +24,7 @@ public class AutomatedTestForCorrectness {
 
             Entity e = m1.createEntity();
 
-            int experimentDuration = 7; // in seconds
+            int experimentDuration = 20; // in seconds
 
             AutomatedCorrectnessTestDatabaseClient c1 = new AutomatedCorrectnessTestDatabaseClient(m1, 0, (int)(0.05*g), experimentDuration);
             AutomatedCorrectnessTestDatabaseClient c2 = new AutomatedCorrectnessTestDatabaseClient(m2, 500, (int)(0.1*g), experimentDuration);

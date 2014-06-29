@@ -54,7 +54,7 @@ public class Megastore {
         return e;
     }
 
-    public ListeningThread getThread() {
+    public ListeningThread getListeningThread() {
         return networkManager.getListeningThread();
     }
 
@@ -114,4 +114,5 @@ public class Megastore {
     public NetworkManager getNetworkManager() {
         return networkManager;
     }
+
 }

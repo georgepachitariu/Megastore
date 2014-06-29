@@ -203,4 +203,14 @@ public class ListeningThread  implements Runnable  {
             proposingSessionsOpen.remove(proposer);
         }
     }
+
+    public PaxosProposer getProposer(long entityId, int cellNumber) {
+        PaxosProposer session=null;
+        synchronized (proposingSessionsOpen) {
+            for (PaxosProposer p : proposingSessionsOpen)
+                if (p.isTheRightSession(Long.toString(entityId), Integer.toString(cellNumber)))
+                    session = p;
+        }
+        return session;
+    }
 }

@@ -1,3 +1,4 @@
+/*
 package megastore.network;
 
 import megastore.Entity;
@@ -16,9 +17,11 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Random;
 
+*/
 /**
  * Created by George on 11/05/2014.
- */
+ *//*
+
 public class NetworkMessages {
     static String currentIp() {
         try {
@@ -52,7 +55,7 @@ public class NetworkMessages {
 
 
         Entity e=m1.createEntity();
-        if(! e.put("white", "cat"))
+        if(! e.put("white", "cat", this))
             System.out.println("Put command failed");
         else {
             WriteOperation expected = new WriteOperation(e.getHashValue("white"), "cat");
@@ -66,7 +69,7 @@ public class NetworkMessages {
         }
 
 
-        if(! m2.getExistingEntities().get(0).put("black", "dog"))
+        if(! m2.getExistingEntities().get(0).put("black", "dog", this))
             System.out.println("Put command failed");
         else {
             WriteOperation expected = new WriteOperation(e.getHashValue("black"), "dog");
@@ -79,7 +82,7 @@ public class NetworkMessages {
             Assert.assertTrue(expected.equals(cell3));
         }
 
-        if(! m3.getExistingEntities().get(0).put("green", "boogie"))
+        if(! m3.getExistingEntities().get(0).put("green", "boogie", this))
             System.out.println("Put command failed");
         else {
             WriteOperation expected = new WriteOperation(e.getHashValue("green"), "boogie");
@@ -104,7 +107,7 @@ public class NetworkMessages {
         Megastore m3=new Megastore("61618", currentIp()+":61616");
 
         Entity e=m1.createEntity();
-        if(! e.put("white", "cat"))
+        if(! e.put("white", "cat", this))
             System.out.println("Put command failed");
         else {
             String actual1 = m1.getEntity (e.getEntityID()).get("white");
@@ -129,7 +132,7 @@ public class NetworkMessages {
 
         Entity e=m1.createEntity();
         Entity e2=m2.createEntity();
-        if(! ( e2.put("white", "cat") && e.put("white", "jaguar")) )
+        if(! ( e2.put("white", "cat", this) && e.put("white", "jaguar", this)) )
             System.out.println("Put command failed");
         else {
             String actual1 = m1.getEntity (e2.getEntityID()).get("white");
@@ -163,7 +166,9 @@ public class NetworkMessages {
 
         // A contains two systemlog cells with values
         Log logA=new Log(null);
-        logA.append(new ValidLogCell(urlA,getWriteListWith(5922/*hash("white")*/,"cat")),0);
+        logA.append(new ValidLogCell(urlA,getWriteListWith(5922*/
+/*hash("white")*//*
+,"cat")),0);
         logA.append(new ValidLogCell(urlA,getWriteListWith(2345L,"dog")),1);
         Entity e1=new Entity(urls,null,0,logA);
         logA.setParent(e1);
@@ -221,7 +226,7 @@ public class NetworkMessages {
             }
             String newValue=getRandomString(100);
             allValues.put(key, newValue);
-            while(! e.put(key,newValue)) {}
+            while(! e.put(key,newValue, this)) {}
 
         }
 
@@ -246,3 +251,4 @@ public class NetworkMessages {
         return blob.substring(0,max);
     }
 }
+*/

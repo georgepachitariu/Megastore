@@ -1,5 +1,6 @@
 package megastore.paxos.proposer;
 
+import megastore.DBWriteOp;
 import megastore.Megastore;
 import megastore.coordinator.message.InvalidateKeyMessage;
 import megastore.paxos.acceptor.PaxosAcceptor;
@@ -25,6 +26,7 @@ public class PaxosProposer {
     private final long entityId;
     private final int cellNumber;
     private final Megastore megastore;
+    private final ValidLogCell originalValue;
 
     private List<String> proposalAcceptorsList;
     private List<String> proposalRejectorsList;
@@ -35,10 +37,12 @@ public class PaxosProposer {
     private Proposal highestPropAcc;
     private int proposalNumber;
     private LogCell finalValue; // in the end this value must be the same on all nodes
+    private DBWriteOp callback;
+    private boolean isAnotherOneSending;
+    private boolean operationHasBeenCompletedByAnotherThread;
 
 
-
-    public PaxosProposer( long entityId, int cellNumber, Megastore megastore, List<String> nodesURL) {
+    public PaxosProposer(long entityId, int cellNumber, Megastore megastore, List<String> nodesURL, ValidLogCell cell, DBWriteOp callback) {
         this.nodesURL = nodesURL;
         Collections.sort(this.nodesURL);
         proposalAcceptorsList=new LinkedList<String>();
@@ -50,10 +54,14 @@ public class PaxosProposer {
         this.megastore=megastore;
         this.entityId=entityId;
         this.cellNumber=cellNumber;
+        this.originalValue=cell;
+        this.callback=callback;
+        isAnotherOneSending =false;
+        operationHasBeenCompletedByAnotherThread=false;
     }
 
-    public boolean proposeValueToLeader(String lastPostionsLeaderURL, ValidLogCell cell) {
-        highestPropAcc=new Proposal(cell,0);
+    public boolean proposeValueToLeader(String lastPostionsLeaderURL) {
+        highestPropAcc=new Proposal(originalValue,0);
         if(megastore.getCurrentUrl().equals(lastPostionsLeaderURL)) {
             return localAcceptorAcceptsValueProposal();
         }
@@ -79,7 +87,7 @@ public class PaxosProposer {
         }
     }
 
-    public boolean proposeValueEnforced(ValidLogCell value, String olderLeaderUrl) {
+    public boolean proposeValueEnforced(String olderLeaderUrl) {
         long startTime=System.currentTimeMillis();
 
         valueAcceptorsList.clear();
@@ -88,7 +96,7 @@ public class PaxosProposer {
 
         if(! olderLeaderUrl.equals(megastore.getCurrentUrl())) {
             // We also have to put on the local node and then add it to the list
-            megastore.getNetworkManager().writeValueOnLog(entityId, cellNumber, value);
+            megastore.getNetworkManager().writeValueOnLog(entityId, cellNumber, originalValue);
             valueAcceptorsList.add(megastore.getCurrentUrl());
         }
 
@@ -96,7 +104,7 @@ public class PaxosProposer {
             // the leader already accepted, so we don't have to send him again
             if (! ( megastore.getCurrentUrl().equals(url) || olderLeaderUrl.equals(url)) )
                 new EnforcedAcceptRequest(entityId, cellNumber, null,
-                        megastore.getCurrentUrl(), url, value).send();
+                        megastore.getCurrentUrl(), url, originalValue).send();
         }
 
         try {
@@ -110,7 +118,7 @@ public class PaxosProposer {
                         System.currentTimeMillis()-startTime>1000) {
                     // we will never have a majority so we return;
 
-                    if (wasOurValueCompletedByOtherNode(value))
+                    if (wasOurValueCompletedByOtherNode(originalValue))
                         return true;
                     else {
                         invalidateAcceptorsValues(valueAcceptorsList);
@@ -129,7 +137,7 @@ public class PaxosProposer {
         }
 
         invalidateNonResponders();
-        this.finalValue = value;
+        this.finalValue = originalValue;
         return  true;
     }
 
@@ -154,7 +162,7 @@ public class PaxosProposer {
         }
     }
 
-    public boolean proposeValueTwoPhases(ValidLogCell value) {
+    public boolean proposeValueTwoPhases() {
         // if the operation takes more that 1000ms we consider it false
         long startTime=System.currentTimeMillis();
 
@@ -186,13 +194,27 @@ public class PaxosProposer {
             if(nrOfRejectors>(allParticipants-1)/2)
                 return false; // we will never have a majority so we return;
 
+            boolean result = isOurValueProposed(originalValue);
+
+            // if another thread is sending we have to wait to return
+            while (!aquireSendingLock()) {
+                Thread.sleep(2);
+            }
+
+            if(operationHasBeenCompletedByAnotherThread)
+                assert true;
+
+            if(operationHasBeenCompletedByAnotherThread &&
+                    (! isOurValueProposed(originalValue)) )
+                return true;
+
+
             // Phase 2
             ////////////////////
-            boolean result = isOurValueProposed(value);
             // we save if the value for which the Paxos will achieve consensus is our value or another one.
             // Even if it's not ours, we continue because we want to achieve consensus on all the nodes.
 
-            createAcceptProposal(value);
+            createAcceptProposal(originalValue);
             // ask local
             if(localAcceptorAcceptsValueProposal())
                 addToValueAcceptorsList(megastore.getCurrentUrl());
@@ -216,7 +238,7 @@ public class PaxosProposer {
                         ) {
                     // we will never have a majority so we return;
 
-                    if (wasOurValueCompletedByOtherNode(value)) {
+                    if (wasOurValueCompletedByOtherNode(originalValue)) {
                         return true;
                     }
                     else {
@@ -241,6 +263,7 @@ public class PaxosProposer {
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
+        releaseFasterSendingLock();
         return false;
     }
 
@@ -274,7 +297,7 @@ public class PaxosProposer {
 
     private boolean localAcceptorAcceptsValueProposal() {
         // the code is from AcceptRequest class
-        PaxosAcceptor acceptor = megastore.getThread().getApropriatePaxosAcceptor(entityId, cellNumber);
+        PaxosAcceptor acceptor = megastore.getListeningThread().getApropriatePaxosAcceptor(entityId, cellNumber);
 
         // unless it has already responded to a prepare request having a number greater than n.
         // and we didn't used that systemlog position
@@ -291,7 +314,7 @@ public class PaxosProposer {
     }
 
     private boolean localAcceptorAcceptsPrepareProposal() {
-        PaxosAcceptor acceptor = megastore.getThread().getApropriatePaxosAcceptor(entityId, cellNumber);
+        PaxosAcceptor acceptor = megastore.getListeningThread().getApropriatePaxosAcceptor(entityId, cellNumber);
         if(acceptor.acceptsPrepareProposal(proposalNumber)) {
             Proposal newProposal = acceptor.getHighestAcceptedProposal(
                     megastore.getNetworkManager(),proposalNumber);
@@ -317,6 +340,8 @@ public class PaxosProposer {
                         destinationURL,proposalNumber).send();
             }
     }
+
+
 
     //    Phase 2. (a) If the proposer receives a response to its prepare requests
 //    (numbered n) from a majority of acceptors, then it sends an accept request to
@@ -398,5 +423,34 @@ public class PaxosProposer {
 
     public void addToValueRejectorsList(String url) {
         valueRejectorsList.add(url);
+    }
+
+    public ValidLogCell getValue() {
+        return originalValue;
+    }
+
+    public DBWriteOp getCallback() {
+        return callback;
+    }
+
+    public synchronized boolean aquireSendingLock() {
+        if(!isAnotherOneSending) {
+            isAnotherOneSending =true;
+            return true;
+        }
+        else
+            return false;
+    }
+
+    public void releaseFasterSendingLock() {
+        isAnotherOneSending =false;
+    }
+
+    public void operationHasBeenCompletedByAnotherThread() {
+        operationHasBeenCompletedByAnotherThread=true;
+    }
+
+    public ValidLogCell getOriginalValue() {
+        return originalValue;
     }
 }

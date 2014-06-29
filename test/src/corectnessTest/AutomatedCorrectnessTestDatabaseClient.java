@@ -1,5 +1,6 @@
 package corectnessTest;
 
+import megastore.DBWriteOp;
 import megastore.Entity;
 import megastore.Megastore;
 import systemlog.OperationLogCell;
@@ -41,10 +42,10 @@ public class AutomatedCorrectnessTestDatabaseClient implements Runnable {
             long before = System.currentTimeMillis();
             entity.get(key);
             long afterRead = System.currentTimeMillis();
-            boolean succeeded = entity.put(key, newValue);
+            boolean succeeded = new DBWriteOp(entity,key,newValue).execute();
             long after = System.currentTimeMillis();
 
-            SystemLog.add(new OperationLogCell(nodeUrl, afterRead - before,
+            SystemLog.add(new OperationLogCell(nodeUrl,"", afterRead - before,
                     after - afterRead, succeeded, before, after - 0));
 
             timeToWait-=(after - before);

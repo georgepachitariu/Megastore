@@ -29,9 +29,20 @@ public class EnforcedAcceptRequest extends PaxosProposerMessage {
         if (!networkManager.isLogPosOccupied(entityId, cellNumber)) {
             networkManager.writeValueOnLog(entityId, cellNumber, value); //we also set the final value
             new EnforcedAR_Accepted(entityId, cellNumber, null, networkManager.getCurrentUrl(), source).send();
+
+            new Thread(new Runnable() {
+                @Override
+                public void run() {
+                    networkManager.getMegastore().getEntity(entityId).
+                            proposeValueToLeaderAgainIfThereWasOne(entityId, cellNumber);
+                }
+            }).start();
+
+
         }
         else
             new EnforcedAR_Rejected(entityId, cellNumber, null, networkManager.getCurrentUrl(), source).send();
+
 
     }
 

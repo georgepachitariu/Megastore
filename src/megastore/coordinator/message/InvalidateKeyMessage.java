@@ -1,5 +1,6 @@
 package megastore.coordinator.message;
 
+import megastore.Megastore;
 import megastore.network.NetworkManager;
 import megastore.network.message.NetworkMessage;
 
@@ -21,7 +22,11 @@ public class InvalidateKeyMessage extends NetworkMessage {
     @Override
     public void act(String[] messageParts) {
         long entityID=Long.parseLong( messageParts[1]);
-        networkManager.getMegastore().invalidate(entityID);
+        Megastore megastore = networkManager.getMegastore();
+        megastore.invalidate(entityID);
+
+//        megastore.getEntity(entityID).catchUp();
+//        megastore.getCoordinator().validate(entityID);
     }
 
     @Override
