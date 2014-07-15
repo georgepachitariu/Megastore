@@ -5,7 +5,6 @@ import megastore.Megastore;
 
 import java.util.LinkedList;
 import java.util.Queue;
-import java.util.Random;
 
 /**
  * Created by George on 10/06/2014.
@@ -57,7 +56,7 @@ public class AutomatedDBClient implements Runnable {
     @Override
     public void run() {
         new Thread(new OperationTimerThread(this,
-                opsPerSecond, Thread.currentThread())).start();
+                opsPerSecond, Thread.currentThread()),"OperationTimer").start();
 
         String nodeUrl = entity.getMegastore().getCurrentUrl();
 
@@ -69,7 +68,7 @@ public class AutomatedDBClient implements Runnable {
                 String key = String.valueOf(startingPoint + i);
                 String newValue = String.valueOf(startingPoint + i);
 
-                while(threadList.size()>=1) { //TODO change it back to 10
+                while(threadList.size()>=25) {
                     try {
                         Thread.sleep(2);
                     } catch (InterruptedException e) {
@@ -78,7 +77,7 @@ public class AutomatedDBClient implements Runnable {
                 }
 
                 Thread t=new Thread(new ClientWriteOpThread(this,entity,
-                        key,newValue, nodeUrl, creationTimestamp));
+                        key,newValue, nodeUrl, creationTimestamp),"ClientWriteOpThr");
                 t.start();
                 threadList.add(t);
 
@@ -112,16 +111,7 @@ public class AutomatedDBClient implements Runnable {
         }
     }
 
-
-    private static Random rand = new Random();
-    private static String getRandomString(int max) {
-        //return RandomStringUtils.randomAlphanumeric(max);
-        String blob="";
-        while(blob.length()<max) {
-            int nr = Math.abs(rand.nextInt());
-            blob+=String.valueOf(nr);
-        }
-        return blob.substring(0,max);
+    public boolean isWritingLockWeak() {
+        return entity.isWritingLockWeak();
     }
-
 }

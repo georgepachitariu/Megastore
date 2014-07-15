@@ -19,7 +19,7 @@ public class NetworkManager {
     public NetworkManager(Megastore megastore, String port) {
         this.megastore=megastore;
         listeningThread = new ListeningThread(this, port);
-        runThread = new Thread(listeningThread);
+        runThread = new Thread(listeningThread,"ListeningThread");
         runThread.setDaemon(false);
         runThread.start();
 
@@ -88,5 +88,13 @@ public class NetworkManager {
 
     public boolean isLogPosOccupied(long entityId, int cellNumber) {
         return megastore.getEntity(entityId).getLog().isOccupied(cellNumber);
+    }
+
+    public boolean isLogPosOpenedForWeakerProposals(long entityId, int cellNumber) {
+        return megastore.getEntity(entityId).getLog().isPositionOpenedForWeakerProposals(cellNumber);
+    }
+
+    public void deleteValueOnLog(long entityId, int cellNumber) {
+        megastore.append(entityId, cellNumber, null);
     }
 }

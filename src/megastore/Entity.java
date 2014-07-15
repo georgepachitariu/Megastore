@@ -1,13 +1,11 @@
 package megastore;
 
+import megastore.coordinator.message.InvalidateKeyMessage;
 import megastore.network.ListeningThread;
 import megastore.network.message.paxos_optimisation.AreYouUpToDateMessage;
 import megastore.network.message.paxos_optimisation.RequestValidLogCellsMessage;
 import megastore.paxos.proposer.PaxosProposer;
-import megastore.write_ahead_log.Log;
-import megastore.write_ahead_log.LogCell;
-import megastore.write_ahead_log.ValidLogCell;
-import megastore.write_ahead_log.WriteOperation;
+import megastore.write_ahead_log.*;
 import systemlog.LogBuffer;
 import systemlog.SystemLog;
 import systemlog.SystemLogCell;
@@ -25,6 +23,7 @@ public class Entity {
     private Log log;
     private Megastore megastore;
     private boolean readyForNextWriteOperation;
+    private boolean isNextWeak;
 
 
     public Entity(List<String> nodesURL, Megastore megastore, long entityId) {
@@ -33,6 +32,7 @@ public class Entity {
         this.nodesURL=nodesURL;
         readyForNextWriteOperation=true;
         this.log=new Log(this);
+        isNextWeak=false;
     }
 
     public Entity(List<String> nodesURL, Megastore megastore, long entityId, Log log) {
@@ -41,13 +41,15 @@ public class Entity {
         this.nodesURL=nodesURL;
         readyForNextWriteOperation=true;
         this.log=log;
+        isNextWeak=false;
     }
 
     public void blockNextOperation() {
         readyForNextWriteOperation=false;
     }
 
-    public void put(String key, String value, DBWriteOp callback) {
+    public void put(String key, String value, DBWriteOp callback, boolean isWeak) {
+        boolean lockOnceReleased=false;
         long hash=getHashValue(key);
         ValidLogCell cell = createLogCell(hash, value);
 
@@ -57,34 +59,52 @@ public class Entity {
         ListeningThread currentThread=megastore.getListeningThread();
         currentThread.addProposer(proposer);
 
-        boolean writeOperationResult;
+        boolean writeOperationResult=false;
 //      Accept Leader: Ask the leader to accept the value as proposal number zero.
 //      The leader is the node that succeded the last write.
 
         String lastPostionsLeaderURL;
 
-        if(currentPosition==0 || log.get(currentPosition-1) == null ||
-                (! log.get(currentPosition-1).isValid() )  )
+        int lastLeader=0;
+        if(currentPosition==0)
             lastPostionsLeaderURL=megastore.getNetworkManager().getNodesURL().get(0);
-        else
-            lastPostionsLeaderURL = log.get(currentPosition-1).getLeaderUrl();
+        else {
+            lastLeader = currentPosition - 1;
+            while (log.get(lastLeader)==null || (!log.get(lastLeader).isValid()))
+                lastLeader--;
+            lastPostionsLeaderURL = log.get(lastLeader).getLeaderUrl();
+        }
 
         boolean leaderProposalResult = proposer.proposeValueToLeader(lastPostionsLeaderURL); //also comment this
-    //    boolean leaderProposalResult=false; //to disable optimisation
+        //    boolean leaderProposalResult=false; //to disable optimisation
 
         if (leaderProposalResult) {
-           // readyForNextWriteOperation=true;
-            writeOperationResult = proposer.proposeValueEnforced(lastPostionsLeaderURL);
+            if(lastLeader>=1 &&                                                                                                          //<-my optimisation
+                    lastPostionsLeaderURL.equals(megastore.getCurrentUrl())) {          //
+                isNextWeak=true;                                                                                                           //
+                readyForNextWriteOperation=true;                                                                              //
+                lockOnceReleased=true;                                                                                              //
+            }                                                                                                                                           //
+
+            if(isWeak) {
+                writeOperationResult = proposer.proposeValueWeak(lastPostionsLeaderURL);
+            }
+            else {
+                writeOperationResult = proposer.proposeValueEnforced(lastPostionsLeaderURL);
+            }
             SystemLog.add(new SystemLogCell(megastore.getCurrentUrl(), "One Round"));
         }
-        else {
+        else
+        if(! isWeak) {
             writeOperationResult = proposer.proposeValueTwoPhases();
             SystemLog.add(new SystemLogCell(megastore.getCurrentUrl(), "Two Rounds"));
         }
 
         currentThread.removeProposer(proposer);
-
-        readyForNextWriteOperation=true;
+        isNextWeak=false;
+        if(! lockOnceReleased) {
+            readyForNextWriteOperation = true;
+        }
 
         callback.setAnswer( writeOperationResult );
     }
@@ -123,14 +143,28 @@ public class Entity {
         long hash=getHashValue(key);
 
 //        1.Query Local: Query the local replica's coordinator to determine if the entity group is up-to-date locally.
-        if( megastore.getCoordinator().isUpToDate(entityId) ) {
-            return getLocalLastValue(hash);
+          synchronized (megastore.getCoordinator().writingLock) {
+            if (megastore.getCoordinator().isUpToDate(entityId)) {
+                return getLocalLastValue(hash);
+            } else {
+                LogBuffer.println("Catch-up on node: " + megastore.getCurrentUrl());
+                reValidate();
+
+                return getLocalLastValue(hash);
+            }
         }
-        else {
-            LogBuffer.println("Catch-up on node: " + megastore.getCurrentUrl());
-            catchUp();
-            megastore.getCoordinator().validate(entityId);
-            return getLocalLastValue(hash);
+    }
+
+    public void reValidate() {
+        //       catchUp();
+        //       megastore.getCoordinator().validate(entityId);
+        new Thread(new InvalidateKeyMessage.CatchUpThread(megastore, entityId), "reValidate_Thr").start();
+        while (!megastore.getCoordinator().isUpToDate(entityId)) {
+            try {
+                Thread.sleep(2);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
         }
     }
 
@@ -152,31 +186,36 @@ public class Entity {
             return value;
     }
 
+    private Object lock=new Object();
     private LinkedList<LogCell> newCells;
-    private void updateMissingLogCellsFrom( String nodeURL) {
-        newCells=null;
+    private void  updateMissingLogCellsFrom( String nodeURL) {
+        synchronized (lock) {
+            newCells = null;
+            int currentSize = log.getNextPosition();
+            List<Integer> invalidPositions = log.getInvalidPositions();
+            long time = System.currentTimeMillis();
+            new RequestValidLogCellsMessage(entityId, null,
+                    megastore.getCurrentUrl(), nodeURL, invalidPositions, currentSize).send();
 
-        int currentSize=log.getNextPosition();
-        List<Integer> invalidPositions=log.getInvalidPositions();
-        new RequestValidLogCellsMessage(entityId, null,
-                megastore.getCurrentUrl(), nodeURL, invalidPositions,currentSize).send();
+            try {
+                do {
+                    if (newCells == null)
+                        Thread.sleep(3);
+                } while (newCells == null);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
 
-        try {
-            do {
-                if(newCells==null)
-                    Thread.sleep(3);
-            } while(newCells==null);
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
 
-        for(int i=0; i<invalidPositions.size(); i++) {
-            log.append(newCells.get(i), invalidPositions.get(i));
-        }
-        for(int i=invalidPositions.size(), j=0; i<newCells.size(); i++, j++) {
-            log.append(newCells.get(i), currentSize+j);
+            for (int i = 0; i < invalidPositions.size(); i++) {
+                log.append(newCells.get(i), invalidPositions.get(i));
+            }
+            for (int i = invalidPositions.size(), j = 0; i < newCells.size(); i++, j++) {
+                log.append(newCells.get(i), currentSize + j);
+            }
         }
     }
+
 
     private String upToDateNode;
     private String findAnUpToDateNode() {
@@ -249,5 +288,13 @@ public class Entity {
             megastore.getListeningThread().removeProposer(proposer);
             oldProposer.releaseFasterSendingLock();
         }
+    }
+
+    public boolean isWritingLockWeak() {
+        return isNextWeak;
+    }
+
+    public void makeCellOpenedForWeakProposals(int i) {
+        log.append(new LogCellOpenedForWeak(), i);
     }
 }

@@ -1,10 +1,10 @@
 package megastore.write_ahead_log;
 
 /**
- * Created by George on 13/05/2014.
+ * Created by George on 05/07/2014.
  */
-public class InvalidLogCell extends LogCell{
-    public InvalidLogCell() {
+public class LogCellOpenedForWeak extends LogCell{
+    public LogCellOpenedForWeak() {
     }
 
     @Override
@@ -22,12 +22,12 @@ public class InvalidLogCell extends LogCell{
 
     @Override
     public String toString() {
-        return "InvalidLogCell";
+        return "LogCellOpenedForWeak";
     }
 
     @Override
     public boolean equals(Object obj) {
-        if(! (obj instanceof InvalidLogCell))
+        if(! (obj instanceof LogCellOpenedForWeak))
             return false;
         else
             return true;
@@ -35,6 +35,6 @@ public class InvalidLogCell extends LogCell{
 
     @Override
     public boolean isPositionOpenedForWeakerProposals() {
-        return false;
+        return true;
     }
 }

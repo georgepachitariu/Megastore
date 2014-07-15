@@ -42,7 +42,7 @@ public class AutomatedCorrectnessTestDatabaseClient implements Runnable {
             long before = System.currentTimeMillis();
             entity.get(key);
             long afterRead = System.currentTimeMillis();
-            boolean succeeded = new DBWriteOp(entity,key,newValue).execute();
+            boolean succeeded = new DBWriteOp(entity,key,newValue,true).execute();
             long after = System.currentTimeMillis();
 
             SystemLog.add(new OperationLogCell(nodeUrl,"", afterRead - before,

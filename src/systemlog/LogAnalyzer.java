@@ -1,6 +1,7 @@
 package systemlog;
 
 import java.util.LinkedList;
+import java.util.List;
 
 /**
  * Created by George on 17/06/2014.
@@ -166,12 +167,14 @@ public class LogAnalyzer {
     }
 
 
-    private float getAvg(LinkedList<Integer> list) {
-        //     Collections.sort(list);
+    private float getAvg(List<Integer> list) {
+    //    Collections.sort(list);
+    //    int nr=list.size();
+     //   list=list.subList(nr-(nr*15/100),nr);
         int sum=0;
         for(int x : list) {
             sum += x;
-//            System.out.println("waiting time:  " +x );
+          //  System.out.println(x);
         }
         return (float)sum/list.size();
     }
@@ -184,6 +187,9 @@ public class LogAnalyzer {
             for(int j=0; j<splittedLog[i].size(); j++) {
                 if(splittedLog[i].get(j) instanceof OperationLogCell) {
                     OperationLogCell nextCell = (OperationLogCell) splittedLog[i].get(j);
+                    System.out.println(nextCell.value+ "\t"+nextCell.succeeded + "\t wait: " + nextCell.timeToWaitForCompletion+
+                            "\t read: " + nextCell.readDuration+ "\t write: " + nextCell.writeDuration);
+
                     if (nextCell.succeeded) {
                         list.add((int) (nextCell.timeToWaitForCompletion));
                     }

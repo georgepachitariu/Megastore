@@ -16,4 +16,6 @@ public abstract class LogCell {
         else
             return new ValidLogCell(raw);
     }
+
+    public abstract boolean isPositionOpenedForWeakerProposals();
 }

@@ -55,6 +55,11 @@ public class ValidLogCell extends LogCell {
         return true;
     }
 
+    @Override
+    public boolean isPositionOpenedForWeakerProposals() {
+        return false;
+    }
+
     public void setLeaderUrl(String leaderUrl) {
         this.leaderUrl = leaderUrl;
     }

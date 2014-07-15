@@ -9,11 +9,13 @@ public class DBWriteOp implements Runnable {
     private String key;
     private Entity entity;
     private Boolean answer;
+    private Boolean isWeak;
 
-    public DBWriteOp(Entity e, String key, String value) {
+    public DBWriteOp(Entity e, String key, String value, Boolean isWeak) {
         this.entity=e;
         this.key=key;
         this.value=value;
+        this.isWeak=isWeak;
         answer=null;
     }
 
@@ -37,6 +39,6 @@ public class DBWriteOp implements Runnable {
 
     @Override
     public void run() {
-        entity.put(key,value, this);
+        entity.put(key,value, this, isWeak);
     }
 }

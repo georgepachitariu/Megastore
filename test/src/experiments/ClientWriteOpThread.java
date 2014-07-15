@@ -11,15 +11,15 @@ import systemlog.SystemLog;
 public class ClientWriteOpThread implements Runnable {
 
     private final Entity entity;
-    private final AutomatedDBClient client;
+    private final AutomatedDBClient entityWorker;
     private final String key;
     private final String newValue;
     private final String nodeUrl;
     private final long creationTimestamp;
 
-    public ClientWriteOpThread(AutomatedDBClient client, Entity e, String key, String newValue,
+    public ClientWriteOpThread(AutomatedDBClient entityWorker, Entity e, String key, String newValue,
                                String nodeUrl, long creationTimestamp) {
-        this.client = client;
+        this.entityWorker = entityWorker;
         this.entity = e;
         this.key = key;
         this.newValue = newValue;
@@ -31,18 +31,19 @@ public class ClientWriteOpThread implements Runnable {
     public void run() {
         boolean succeeded;
         do {
-            client.acquireWritingLock();
+            entityWorker.acquireWritingLock();
 
             long before = System.currentTimeMillis();
             entity.get(key);
             long afterRead = System.currentTimeMillis();
-            succeeded = new DBWriteOp(entity,key,newValue).execute();
+            boolean isWritingLockWeak=entityWorker.isWritingLockWeak();
+            succeeded = new DBWriteOp(entity,key,newValue,isWritingLockWeak).execute();
             long after = System.currentTimeMillis();
 
             SystemLog.add(new OperationLogCell(nodeUrl, newValue, afterRead - before,
                     after - afterRead, succeeded, before, after - creationTimestamp));
 
         } while (!succeeded);
-        client.threadCompleted(Thread.currentThread());
+        entityWorker.threadCompleted(Thread.currentThread());
     }
 }

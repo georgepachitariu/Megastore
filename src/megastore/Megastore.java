@@ -114,5 +114,4 @@ public class Megastore {
     public NetworkManager getNetworkManager() {
         return networkManager;
     }
-
 }

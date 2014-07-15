@@ -8,6 +8,7 @@ import megastore.paxos.message.phase1.PrepareRequest;
 import megastore.paxos.message.phase2.AcceptRequest;
 import megastore.paxos.message.phase2.EnforcedAcceptRequest;
 import megastore.paxos.message.phase2.InvalidateAcceptorMessage;
+import megastore.paxos.message.weakerRequests.WeakerAcceptRequest;
 import megastore.write_ahead_log.InvalidLogCell;
 import megastore.write_ahead_log.Log;
 import megastore.write_ahead_log.LogCell;
@@ -17,6 +18,7 @@ import systemlog.LogBuffer;
 import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Random;
 
 /**
  * Created by George on 03/05/2014.
@@ -60,14 +62,25 @@ public class PaxosProposer {
         operationHasBeenCompletedByAnotherThread=false;
     }
 
-    public boolean proposeValueToLeader(String lastPostionsLeaderURL) {
+    public boolean proposeValueToLeader(String lastPositionsLeaderURL) {
         highestPropAcc=new Proposal(originalValue,0);
-        if(megastore.getCurrentUrl().equals(lastPostionsLeaderURL)) {
+        if(megastore.getCurrentUrl().equals(lastPositionsLeaderURL)) {
+            if (megastore.getCurrentUrl().equals(lastPositionsLeaderURL) ) {
+                try {
+                    if ((Math.abs(new Random().nextInt()) % 100 < 40))
+                        Thread.sleep(20);
+
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }
+
+
             return localAcceptorAcceptsValueProposal();
         }
         else {
             new AcceptRequest(entityId, cellNumber, null, megastore.getCurrentUrl(),
-                    lastPostionsLeaderURL, highestPropAcc).send();
+                    lastPositionsLeaderURL, highestPropAcc).send();
 
             long start=System.currentTimeMillis();
             int responded = 0;
@@ -452,5 +465,56 @@ public class PaxosProposer {
 
     public ValidLogCell getOriginalValue() {
         return originalValue;
+    }
+
+    public boolean proposeValueWeak(String olderLeaderUrl) {
+
+        long startTime=System.currentTimeMillis();
+
+        valueAcceptorsList.clear();
+        megastore.getNetworkManager().writeValueOnLog(entityId, cellNumber, originalValue);
+        valueAcceptorsList.add(olderLeaderUrl);
+
+        if(! olderLeaderUrl.equals(megastore.getCurrentUrl())) {
+            // We also have to put on the local node and then add it to the list
+            valueAcceptorsList.add(megastore.getCurrentUrl());
+        }
+
+        for (String url : nodesURL) {
+            // the leader already accepted, so we don't have to send him again
+            if (! ( megastore.getCurrentUrl().equals(url) || olderLeaderUrl.equals(url)) )
+                new WeakerAcceptRequest(entityId, cellNumber, null,
+                        megastore.getCurrentUrl(), url, originalValue).send();
+        }
+
+        try {
+            int nrOfAcceptors, nrOfRejectors, allParticipants;
+            do {
+                nrOfRejectors = valueRejectorsList.size();
+                nrOfAcceptors = valueAcceptorsList.size();
+                allParticipants = nodesURL.size();
+
+                if (nrOfRejectors > ((allParticipants - 1) / 2) ||
+                        System.currentTimeMillis()-startTime>1000) {
+                        // we will never have a majority so we delete the wanted value and return
+                      megastore.getNetworkManager().deleteValueOnLog(entityId, cellNumber);
+                       return false;
+                }
+
+                if(nrOfAcceptors <= allParticipants/2)
+                    Thread.sleep(2); // we wait for the value acceptance messages to come;
+
+
+            } while(nrOfAcceptors <= allParticipants/2); //production code
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+
+
+
+
+        invalidateNonResponders();
+        this.finalValue = originalValue;
+        return  true;
     }
 }

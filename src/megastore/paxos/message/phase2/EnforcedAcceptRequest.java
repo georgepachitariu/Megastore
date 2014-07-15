@@ -25,9 +25,14 @@ public class EnforcedAcceptRequest extends PaxosProposerMessage {
 
         ValidLogCell value = new ValidLogCell( messageParts[3] );
         String source= messageParts[4];
+        if(source==null)
+            System.out.println("");
 
         if (!networkManager.isLogPosOccupied(entityId, cellNumber)) {
             networkManager.writeValueOnLog(entityId, cellNumber, value); //we also set the final value
+            networkManager.getMegastore().getEntity(entityId).
+                    makeCellOpenedForWeakProposals(cellNumber+1);
+
             new EnforcedAR_Accepted(entityId, cellNumber, null, networkManager.getCurrentUrl(), source).send();
 
             new Thread(new Runnable() {
@@ -45,8 +50,6 @@ public class EnforcedAcceptRequest extends PaxosProposerMessage {
 
 
     }
-
-
 
     @Override
     public String getID() {

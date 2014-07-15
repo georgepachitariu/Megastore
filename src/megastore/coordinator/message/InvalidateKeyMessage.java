@@ -9,24 +9,40 @@ import megastore.network.message.NetworkMessage;
  */
 public class InvalidateKeyMessage extends NetworkMessage {
 
-    private NetworkManager networkManager;
+    private final NetworkManager networkManager;
     private long entityID;
 
     public InvalidateKeyMessage(NetworkManager networkManager,
-                                 String destination, long entityID) {
+                                String destination, long entityID) {
         super(destination);
         this.entityID=entityID;
         this.networkManager=networkManager;
     }
 
+    public static class CatchUpThread implements Runnable {
+        private final long entityID;
+        private final Megastore m;
+
+        public CatchUpThread(Megastore m, long entityID) {
+            this.m=m;
+            this.entityID=entityID;
+        }
+
+        @Override
+        public void run() {
+            m.getEntity(entityID).catchUp();
+            m.getCoordinator().validate(entityID);
+        }
+    }
+
+
     @Override
     public void act(String[] messageParts) {
-        long entityID=Long.parseLong( messageParts[1]);
+        entityID=Long.parseLong( messageParts[1]);
         Megastore megastore = networkManager.getMegastore();
-        megastore.invalidate(entityID);
-
-//        megastore.getEntity(entityID).catchUp();
-//        megastore.getCoordinator().validate(entityID);
+            megastore.invalidate(entityID);
+        //Runnable r=new CatchUpThread(megastore,entityID);
+        //new Thread(r).start();                                                                 //My optimisation
     }
 
     @Override

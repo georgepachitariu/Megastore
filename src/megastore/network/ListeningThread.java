@@ -18,6 +18,9 @@ import megastore.paxos.message.phase1.PrepReqAcceptedWithProp;
 import megastore.paxos.message.phase1.PrepReqRejected;
 import megastore.paxos.message.phase1.PrepareRequest;
 import megastore.paxos.message.phase2.*;
+import megastore.paxos.message.weakerRequests.WeakerAR_Accepted;
+import megastore.paxos.message.weakerRequests.WeakerAR_Rejected;
+import megastore.paxos.message.weakerRequests.WeakerAcceptRequest;
 import megastore.paxos.proposer.PaxosProposer;
 
 import java.io.IOException;
@@ -71,6 +74,8 @@ public class ListeningThread  implements Runnable  {
         knownAcceptorMessages.add(new AR_Rejected(-1,-1,null,null,null,-1));
         knownAcceptorMessages.add(new EnforcedAR_Accepted(-1,-1,null,null,null));
         knownAcceptorMessages.add(new EnforcedAR_Rejected(-1,-1,null,null,null));
+        knownAcceptorMessages.add(new WeakerAR_Accepted(-1,-1,null,null,null));
+        knownAcceptorMessages.add(new WeakerAR_Rejected(-1,-1,null,null,null));
     }
 
     private void addPaxosProposerMessages() {
@@ -79,6 +84,7 @@ public class ListeningThread  implements Runnable  {
         knownProposerMessages.add(new AcceptRequest(-1, -1, networkManager, null, null, null));
         knownProposerMessages.add(new InvalidateAcceptorMessage(-1,-1,networkManager,null,null));
         knownProposerMessages.add(new EnforcedAcceptRequest(-1, -1, networkManager, null, null, null));
+        knownProposerMessages.add(new WeakerAcceptRequest(-1, -1, networkManager, null, null, null));
     }
 
     private void addNetworkMessages() {
@@ -121,7 +127,7 @@ public class ListeningThread  implements Runnable  {
         }
     }
 
-    public synchronized boolean treatMessage(String[] parts) {
+    public boolean treatMessage(String[] parts) {
         for(NetworkMessage m : knownNetworkMessages) {
             if (m.getID().equals(parts[0])) {
                 m.act(parts);
@@ -133,7 +139,7 @@ public class ListeningThread  implements Runnable  {
         int cellNumber=Integer.parseInt(parts[1]);
         PaxosAcceptor session = getApropriatePaxosAcceptor(entityId,cellNumber);
         for(PaxosProposerMessage m : knownProposerMessages) {
-            if (m.getID().equals(parts[2])) {
+            if (m.getID().equals(parts[2]) && session!=null) {
                 m.setAcceptor(session);
                 m.act(parts);
                 return true;

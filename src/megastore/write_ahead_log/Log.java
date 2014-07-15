@@ -29,10 +29,12 @@ public class Log {
 
             logList[cellNumber] = cell;
 
-            if (size == cellNumber)
-                size++;
-            if (size < cellNumber)
-                size = cellNumber + 1;
+            if(cell!=null && cell.isValid()) {
+                if (size == cellNumber)
+                    size++;
+                if (size < cellNumber)
+                    size = cellNumber + 1;
+            }
         }
     }
 
@@ -85,15 +87,19 @@ public class Log {
         }
     }
 
-    public boolean isOccupied(int cellNumber) {
-        synchronized (this) {
-            if (logList[cellNumber] != null && logList[cellNumber].isValid())
-                return true;
-            return false;
-        }
+    public synchronized boolean isOccupied(int cellNumber) {
+        if (logList[cellNumber] != null && logList[cellNumber].isValid())
+            return true;
+        return false;
     }
 
     public void setParent(Entity parent) {
         this.parent = parent;
+    }
+
+    public boolean isPositionOpenedForWeakerProposals(int cellNumber) {
+        if (logList[cellNumber] != null && logList[cellNumber].isPositionOpenedForWeakerProposals())
+            return true;
+        return false;
     }
 }
