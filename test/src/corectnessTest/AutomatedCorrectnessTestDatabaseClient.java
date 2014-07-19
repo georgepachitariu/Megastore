@@ -46,7 +46,7 @@ public class AutomatedCorrectnessTestDatabaseClient implements Runnable {
             long after = System.currentTimeMillis();
 
             SystemLog.add(new OperationLogCell(nodeUrl,"", afterRead - before,
-                    after - afterRead, succeeded, before, after - 0));
+                    after - afterRead, succeeded, before, after - 0,entity.getMegastore().getCurrentUrl()));
 
             timeToWait-=(after - before);
             if(timeToWait<0)

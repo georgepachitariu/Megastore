@@ -174,7 +174,7 @@ public class LogAnalyzer {
         int sum=0;
         for(int x : list) {
             sum += x;
-          //  System.out.println(x);
+        //    System.out.println(x);
         }
         return (float)sum/list.size();
     }
@@ -187,8 +187,8 @@ public class LogAnalyzer {
             for(int j=0; j<splittedLog[i].size(); j++) {
                 if(splittedLog[i].get(j) instanceof OperationLogCell) {
                     OperationLogCell nextCell = (OperationLogCell) splittedLog[i].get(j);
-                    System.out.println(nextCell.value+ "\t"+nextCell.succeeded + "\t wait: " + nextCell.timeToWaitForCompletion+
-                            "\t read: " + nextCell.readDuration+ "\t write: " + nextCell.writeDuration);
+         //           System.out.println(nextCell.value+ "\t"+nextCell.succeeded + "\t wait: " + nextCell.timeToWaitForCompletion+
+         //                   "\t read: " + nextCell.readDuration+ "\t write: " + nextCell.writeDuration);
 
                     if (nextCell.succeeded) {
                         list.add((int) (nextCell.timeToWaitForCompletion));
@@ -199,6 +199,30 @@ public class LogAnalyzer {
         System.out.println("median waiting time Avg Time: "+ getAvg(list));
     }
 
+    public void countSuccessfullOperationsPerNode() {
+
+        for(int i=0; i<splittedLog.length; i++)
+        {
+            int succeeded=0;
+            int failed=0;
+
+            for(int j=0; j<splittedLog[i].size(); j++) {
+                if(splittedLog[i].get(j) instanceof OperationLogCell) {
+                    OperationLogCell cell = (OperationLogCell) splittedLog[i].get(j);
+
+                    if (cell.succeeded) {
+                        succeeded++;
+                   //     System.out.println(cell.timeToWaitForCompletion);
+                    }
+                    else
+                        failed++;
+
+                    }
+                }
+            System.out.println("Succeeded: " + succeeded+ "\t Failed: " +failed);
+            }
+        }
+
     public void printInfoAboutOperations() {
         for (LogCell cell : log) {
             if (cell instanceof OperationLogCell) {
@@ -207,5 +231,16 @@ public class LogAnalyzer {
                         " | Waiting time:  " +nextCell.timeToWaitForCompletion + " | reading time: "+ nextCell.readDuration);
             }
         }
+    }
+
+    public void countNetworkMessages() {
+        int count=0;
+
+        for(LogCell l : log) {
+                if(l instanceof NetworkMessage)
+                    count++;
+        }
+
+        System.out.println("The number of network messages is: " + count);
     }
 }

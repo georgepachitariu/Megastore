@@ -27,18 +27,22 @@ public class MessageGatherer implements Runnable {
             Thread.sleep(30);
             /////////////////////////////////////////////
 
+
             InputStream inputStream = clientSocket.getInputStream();
-            while (inputStream.available() == 0) {
-                Thread.sleep(1);
-            }
-            byte[] buffer = new byte[inputStream.available()];
 
-            inputStream.read(buffer);
-            clientSocket.getInputStream().close();
+            byte []all=new byte[0];
+            int bytesRead=0;
+            do {
+                byte[] buffer=new byte[1024];
+                bytesRead=inputStream.read(buffer,0,buffer.length);
+                if(bytesRead!=-1)
+                    all=concat(all,buffer,bytesRead);
+            } while(bytesRead !=-1);
 
-            String message = new String(buffer);
+            String message = new String(all);
 
             String[] parts = message.split(",");
+
             boolean recognized = listeningThread.treatMessage(parts);
 
             if (!recognized)
@@ -58,7 +62,14 @@ public class MessageGatherer implements Runnable {
         }
     }
 
-
+    byte[] concat(byte[] A, byte[] B, int bLength) {
+        int aLen = A.length;
+        int bLen = bLength;
+        byte[] C= new byte[aLen+bLen];
+        System.arraycopy(A, 0, C, 0, aLen);
+        System.arraycopy(B, 0, C, aLen, bLen);
+        return C;
+    }
 
 
 }

@@ -41,7 +41,7 @@ public class ClientWriteOpThread implements Runnable {
             long after = System.currentTimeMillis();
 
             SystemLog.add(new OperationLogCell(nodeUrl, newValue, afterRead - before,
-                    after - afterRead, succeeded, before, after - creationTimestamp));
+                    after - afterRead, succeeded, before, after - creationTimestamp, entity.getMegastore().getCurrentUrl()));
 
         } while (!succeeded);
         entityWorker.threadCompleted(Thread.currentThread());

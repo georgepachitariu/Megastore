@@ -21,16 +21,9 @@ public class SystemLog {
         return blob.toString();
     }
 
-
-
-    public static synchronized void add(OperationLogCell operationLogCell) {
+    public static synchronized void add(LogCell logCell) {
         if(isAccepting)
-            log.add(operationLogCell);
-    }
-
-    public static synchronized void add(SystemLogCell systemLogCell) {
-        if(isAccepting)
-            log.add(systemLogCell);
+            log.add(logCell);
     }
 
     public static void stopAccepting() {

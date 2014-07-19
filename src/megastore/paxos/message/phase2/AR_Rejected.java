@@ -21,7 +21,8 @@ public class AR_Rejected  extends PaxosAcceptorMessage {
         String source = messageParts[4];
         int number = Integer.parseInt( messageParts[3] );
 
-       proposer.addToValueRejectorsList(source);
+       if(proposer!=null)
+           proposer.addToValueRejectorsList(source);
     }
 
     @Override

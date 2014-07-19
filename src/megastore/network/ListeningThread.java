@@ -45,11 +45,13 @@ public class ListeningThread  implements Runnable  {
     private List<PaxosAcceptorMessage> knownAcceptorMessages;
 
     private ServerSocket serverSocket;
+    private LinkedList<Thread> workersList;
 
     public ListeningThread(NetworkManager networkManager, String port) {
         proposingSessionsOpen=new LinkedList<PaxosProposer>();
         acceptingSessionsOpen=new LinkedList<PaxosAcceptor>();
         this.networkManager=networkManager;
+        workersList=new LinkedList<Thread>();
 
         try {
             serverSocket = new ServerSocket(Integer.parseInt(port));
@@ -112,14 +114,25 @@ public class ListeningThread  implements Runnable  {
             Socket clientSocket=null;
             try {
                 clientSocket = serverSocket.accept();
+           //     SystemLog.add(new systemlog.NetworkMessage(getCurrentUrl()));
 
-                Thread worker=new Thread(new MessageGatherer(clientSocket, this));
+                Thread worker=new Thread(new MessageGatherer(clientSocket, this),"MessageReaderFromNetwork");
+                workersList.add(worker);
                 worker.start();
 
             } catch (IOException e) {
                 e.printStackTrace();
             }
         }
+
+        for(Thread t : workersList) {
+            try {
+                t.join();
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }
+
         try {
             serverSocket.close();
         } catch (IOException e) {

@@ -1,5 +1,6 @@
 package megastore.network.message.paxos_optimisation;
 
+import megastore.Entity;
 import megastore.network.NetworkManager;
 import megastore.network.message.NetworkMessage;
 import megastore.write_ahead_log.InvalidLogCell;
@@ -36,7 +37,19 @@ public class RequestValidLogCellsMessage extends NetworkMessage {
         source=messageParts[2];
         logSize=Integer.parseInt( messageParts[3] );
 
-        Log log = networkManager.getMegastore().getEntity(entityID).getLog();
+
+        Entity en;
+        do {
+            en=networkManager.getMegastore().getEntity(entityID);
+            if(en==null) {
+                try {
+                    Thread.sleep(10);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }
+        } while (en==null);
+        Log log=en.getLog();
         LinkedList<LogCell> list=new LinkedList<LogCell>();
         for(int i=4; i<messageParts.length; i++) {
             int pos=Integer.parseInt( messageParts[i] );

@@ -17,19 +17,19 @@ public class NetworkManager {
     private List<String> nodesURL;
 
     public NetworkManager(Megastore megastore, String port) {
-        this.megastore=megastore;
+        this.megastore = megastore;
         listeningThread = new ListeningThread(this, port);
-        runThread = new Thread(listeningThread,"ListeningThread");
+        runThread = new Thread(listeningThread, "ListeningThread");
         runThread.setDaemon(false);
         runThread.start();
 
-        nodesURL=new LinkedList<String>();
+        nodesURL = new LinkedList<String>();
         nodesURL.add(listeningThread.getCurrentUrl());
     }
 
     public void updateNodesFrom(String nodeUrl) {
         new IntroductionMessage(this, listeningThread.getCurrentUrl(), nodeUrl).send();
-        while(nodesURL.size() == 1l) {
+        while (nodesURL.size() == 1l) {
             try {
                 Thread.sleep(2);
             } catch (InterruptedException e) {
@@ -38,18 +38,18 @@ public class NetworkManager {
         }
     }
 
-    public void putNodes (String blob) {
-        nodesURL= new LinkedList<String>();
-        String[] parts= blob.split("!");
-        for(String p : parts) {
+    public void putNodes(String blob) {
+        nodesURL = new LinkedList<String>();
+        String[] parts = blob.split("!");
+        for (String p : parts) {
             nodesURL.add(p);
         }
     }
 
     public String getAvailableNodesAsString() {
-        String blob="";
-        for(String str: nodesURL)
-            blob+=str + "!";
+        String blob = "";
+        for (String str : nodesURL)
+            blob += str + "!";
         return blob;
     }
 

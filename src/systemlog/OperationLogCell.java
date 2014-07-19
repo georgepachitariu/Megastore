@@ -10,9 +10,10 @@ public class OperationLogCell extends LogCell {
     public final long readDuration;
     public final long writeDuration;
     public final long timeToWaitForCompletion;
+    public final String authorNodeUrl;
 
     public OperationLogCell(String nodeUrl, String value,  long readDuration,
-                            long writeDuration, boolean succeeded, long timestamp, long timeToWaitForCompletion) {
+                            long writeDuration, boolean succeeded, long timestamp, long timeToWaitForCompletion, String authorNodeUrl) {
         super(nodeUrl);
         this.value=value;
         this.readDuration=readDuration;
@@ -20,6 +21,7 @@ public class OperationLogCell extends LogCell {
         this.succeeded=succeeded;
         this.timestamp = timestamp;
         this.timeToWaitForCompletion=timeToWaitForCompletion;
+        this.authorNodeUrl=authorNodeUrl;
     }
 
     @Override

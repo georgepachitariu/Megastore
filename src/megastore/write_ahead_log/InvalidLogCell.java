@@ -37,4 +37,9 @@ public class InvalidLogCell extends LogCell{
     public boolean isPositionOpenedForWeakerProposals() {
         return false;
     }
+
+    @Override
+    public boolean isLocalOperationAccepted() {
+        return true;
+    }
 }

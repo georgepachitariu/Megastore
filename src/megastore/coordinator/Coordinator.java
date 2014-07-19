@@ -13,7 +13,6 @@ public class Coordinator {
 //    has observed all Paxos writes. For entity groups in that set, the replica has
 //    suficient state to serve local reads.
     private List<EntityState> entities;
-    public Object writingLock=new Object();
 
     public Coordinator() {
         entities=new LinkedList<EntityState>();
@@ -27,11 +26,9 @@ public class Coordinator {
     public void invalidate(long entityID) {
 //        If a write is not accepted on a replica, we must remove the entity group 's
 //        key from that replica 's coordinator. This process is called invalidation.
-        synchronized (writingLock) {
             for (EntityState e : entities)
                 if (e.entityID == entityID)
                     e.isValid = false;
-        }
     }
 
     public boolean isUpToDate(long entityID) {

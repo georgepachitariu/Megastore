@@ -83,6 +83,9 @@ public class Megastore {
     }
 
     public Entity getEntity(long entityId) {
+        if(existingEntities==null)
+            return null;
+
         for(Entity e : existingEntities)
             if(e.getEntityID()==entityId)
                 return e;

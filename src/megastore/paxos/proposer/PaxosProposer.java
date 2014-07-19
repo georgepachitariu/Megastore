@@ -18,7 +18,6 @@ import systemlog.LogBuffer;
 import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.Random;
 
 /**
  * Created by George on 03/05/2014.
@@ -65,17 +64,6 @@ public class PaxosProposer {
     public boolean proposeValueToLeader(String lastPositionsLeaderURL) {
         highestPropAcc=new Proposal(originalValue,0);
         if(megastore.getCurrentUrl().equals(lastPositionsLeaderURL)) {
-            if (megastore.getCurrentUrl().equals(lastPositionsLeaderURL) ) {
-                try {
-                    if ((Math.abs(new Random().nextInt()) % 100 < 40))
-                        Thread.sleep(20);
-
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
-            }
-
-
             return localAcceptorAcceptsValueProposal();
         }
         else {
@@ -90,7 +78,7 @@ public class PaxosProposer {
                     responded += valueRejectorsList.size();
                     if (responded == 0)
                         Thread.sleep(2); // we wait for the response to come;
-                    if(System.currentTimeMillis()-start>1000)
+                    if(System.currentTimeMillis()-start>200)
                         return false;
                 } while (responded == 0);
             } catch (InterruptedException e) {
@@ -120,6 +108,18 @@ public class PaxosProposer {
                         megastore.getCurrentUrl(), url, originalValue).send();
         }
 
+        boolean result=waitForResult();
+        if(result) {
+            invalidateNonResponders();
+            this.finalValue = originalValue;
+            return true;
+        }
+        else
+            return false;
+    }
+
+    public boolean waitForResult() {
+        long startTime = System.currentTimeMillis();
         try {
             int nrOfAcceptors, nrOfRejectors, allParticipants;
             do {
@@ -127,8 +127,7 @@ public class PaxosProposer {
                 nrOfAcceptors = valueAcceptorsList.size();
                 allParticipants = nodesURL.size();
 
-                if (nrOfRejectors > ((allParticipants - 1) / 2) ||
-                        System.currentTimeMillis()-startTime>1000) {
+                if (nrOfRejectors > ((allParticipants - 1) / 2) || System.currentTimeMillis()-startTime>200) {
                     // we will never have a majority so we return;
 
                     if (wasOurValueCompletedByOtherNode(originalValue))
@@ -142,16 +141,12 @@ public class PaxosProposer {
                 if(nrOfAcceptors <= allParticipants/2)
                     Thread.sleep(2); // we wait for the value acceptance messages to come;
 
-
             } while(nrOfAcceptors <= allParticipants/2); //production code
             // } while (nrOfAcceptors < allParticipants);// my test code
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
-
-        invalidateNonResponders();
-        this.finalValue = originalValue;
-        return  true;
+        return true;
     }
 
     private void invalidateNonResponders() {
@@ -194,6 +189,7 @@ public class PaxosProposer {
 
             // as the rest
             sendPrepareRequests();
+            long sendingTime=System.currentTimeMillis();
 
             do {
                 nrOfAcceptors = proposalAcceptorsList.size();
@@ -202,6 +198,8 @@ public class PaxosProposer {
 
                 if(nrOfAcceptors <= allParticipants/2)
                     Thread.sleep(2); // the proposal acceptance messages didn't yet come;
+                if(System.currentTimeMillis()-sendingTime>200)
+                    return false;
             } while(nrOfAcceptors+nrOfRejectors < allParticipants); //production code
 
             if(nrOfRejectors>(allParticipants-1)/2)
@@ -246,9 +244,8 @@ public class PaxosProposer {
                 nrOfRejectors = valueRejectorsList.size();
                 allParticipants = nodesURL.size();
 
-                if (nrOfRejectors > ((allParticipants - 1) / 2) // ||
-                 //       System.currentTimeMillis()-startTime > 1000
-                        ) {
+                if (nrOfRejectors > ((allParticipants - 1) / 2)  ||
+                        System.currentTimeMillis()-startTime > 200 ) {
                     // we will never have a majority so we return;
 
                     if (wasOurValueCompletedByOtherNode(originalValue)) {
@@ -314,7 +311,8 @@ public class PaxosProposer {
 
         // unless it has already responded to a prepare request having a number greater than n.
         // and we didn't used that systemlog position
-        if ( (!megastore.getNetworkManager().isLogPosOccupied(entityId, cellNumber)) &&
+        if (    megastore.getEntity(entityId).isLocalOperationAccepted(cellNumber) &&
+                (!megastore.getNetworkManager().isLogPosOccupied(entityId, cellNumber)) &&
                 (acceptor.getHighestPropNumberAcc() <= highestPropAcc.pNumber)) {
             acceptor.setHighestPropAcc(highestPropAcc);
             acceptor.setHighestPropNumberAcc(highestPropAcc.pNumber);
@@ -340,7 +338,6 @@ public class PaxosProposer {
         else
             return false;
     }
-
 
     // to be called by megastore after a write operation has been made local
     public void sendPrepareRequests() {
@@ -431,11 +428,15 @@ public class PaxosProposer {
     }
 
     public void addToValueAcceptorsList(String acceptorURL) {
+        synchronized (valueAcceptorsList) {
             valueAcceptorsList.add(acceptorURL);
+        }
     }
 
     public void addToValueRejectorsList(String url) {
-        valueRejectorsList.add(url);
+        synchronized (valueRejectorsList) {
+            valueRejectorsList.add(url);
+        }
     }
 
     public ValidLogCell getValue() {
@@ -468,9 +469,6 @@ public class PaxosProposer {
     }
 
     public boolean proposeValueWeak(String olderLeaderUrl) {
-
-        long startTime=System.currentTimeMillis();
-
         valueAcceptorsList.clear();
         megastore.getNetworkManager().writeValueOnLog(entityId, cellNumber, originalValue);
         valueAcceptorsList.add(olderLeaderUrl);
@@ -486,35 +484,16 @@ public class PaxosProposer {
                 new WeakerAcceptRequest(entityId, cellNumber, null,
                         megastore.getCurrentUrl(), url, originalValue).send();
         }
+        long startTime=System.currentTimeMillis();
 
-        try {
-            int nrOfAcceptors, nrOfRejectors, allParticipants;
-            do {
-                nrOfRejectors = valueRejectorsList.size();
-                nrOfAcceptors = valueAcceptorsList.size();
-                allParticipants = nodesURL.size();
+        boolean result=waitForResult();
 
-                if (nrOfRejectors > ((allParticipants - 1) / 2) ||
-                        System.currentTimeMillis()-startTime>1000) {
-                        // we will never have a majority so we delete the wanted value and return
-                      megastore.getNetworkManager().deleteValueOnLog(entityId, cellNumber);
-                       return false;
-                }
-
-                if(nrOfAcceptors <= allParticipants/2)
-                    Thread.sleep(2); // we wait for the value acceptance messages to come;
-
-
-            } while(nrOfAcceptors <= allParticipants/2); //production code
-        } catch (InterruptedException e) {
-            e.printStackTrace();
+        if(result) {
+            invalidateNonResponders();
+            this.finalValue = originalValue;
+            return true;
         }
-
-
-
-
-        invalidateNonResponders();
-        this.finalValue = originalValue;
-        return  true;
+        else
+            return false;
     }
 }

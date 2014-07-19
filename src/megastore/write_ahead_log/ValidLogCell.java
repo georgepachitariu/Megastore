@@ -60,6 +60,11 @@ public class ValidLogCell extends LogCell {
         return false;
     }
 
+    @Override
+    public boolean isLocalOperationAccepted() {
+        return true;
+    }
+
     public void setLeaderUrl(String leaderUrl) {
         this.leaderUrl = leaderUrl;
     }

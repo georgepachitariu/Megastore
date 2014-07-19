@@ -15,12 +15,18 @@ public abstract class NetworkMessage implements Runnable {
         if(destinationURL!=null) {
             String[] parts = destinationURL.split(":");
             this.destinationIP = parts[0];
+            if(parts.length!=2)
+                System.out.println("");
             this.destinationPort = Integer.parseInt(parts[1]);
         }
     }
 
     @Override
     public void run() {
+        if(destinationIP==null)
+             return;
+
+
         Socket socket=null;
         try {
             socket= new Socket(destinationIP, destinationPort);
@@ -29,7 +35,6 @@ public abstract class NetworkMessage implements Runnable {
             byte[] messageAsBytes = toMessage().getBytes();
             socket.getOutputStream().write(messageAsBytes);
             socket.getOutputStream().flush();
-            socket.getOutputStream().close();
         } catch (IOException e) {
             e.printStackTrace();
         }  finally {

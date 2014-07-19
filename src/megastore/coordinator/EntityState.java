@@ -6,7 +6,6 @@ package megastore.coordinator;
 public class EntityState {
     public long entityID;
     public boolean isValid;
-    public boolean isTemporaryInvalid;
 
     public EntityState(long entityID, boolean isValid) {
        this.entityID=entityID;

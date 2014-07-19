@@ -1,7 +1,6 @@
 package megastore.write_ahead_log;
 
 import megastore.Entity;
-import systemlog.LogBuffer;
 
 import java.util.LinkedList;
 import java.util.List;
@@ -11,21 +10,26 @@ public class Log {
     private LogCell[] logList;
     public int size;
 
+    private int failedRequests;
+    private long firstFailedTimestamp;
+
     public Log(Entity parent) {
         logList=new LogCell[30000];
         size =0;
         this.parent=parent;
+        failedRequests=0;
+        firstFailedTimestamp=System.currentTimeMillis();
     }
 
     public void append(LogCell cell, int cellNumber) {
         synchronized (this) {
-            if (logList[cellNumber] != null)
-                LogBuffer.println("Node/Position " + parent.getMegastore().getCurrentUrl() + "/" + cellNumber +
-                        "; Old: " + logList[cellNumber] +
-                        "; New: " + cell);
-            else
-                LogBuffer.println("Node/Position: " + parent.getMegastore().getCurrentUrl() + "/" + cellNumber +
-                        "; New: " + cell);
+//            if (logList[cellNumber] != null  )
+//                LogBuffer.println("Node/Position " + parent.getMegastore().getCurrentUrl() + "/" + cellNumber +
+//                        "; Old: " + logList[cellNumber] +
+//                        "; New: " + cell);
+//            else
+//                LogBuffer.println("Node/Position: " + parent.getMegastore().getCurrentUrl() + "/" + cellNumber +
+//                        "; New: " + cell);
 
             logList[cellNumber] = cell;
 
@@ -88,9 +92,31 @@ public class Log {
     }
 
     public synchronized boolean isOccupied(int cellNumber) {
-        if (logList[cellNumber] != null && logList[cellNumber].isValid())
+        if (logList[cellNumber] != null && logList[cellNumber].isValid()) {
+            if(System.currentTimeMillis()-firstFailedTimestamp>200) {
+                failedRequests = 0;
+                firstFailedTimestamp=System.currentTimeMillis();
+            }
+            failedRequests++;
+
+            if(failedRequests >6) {
+                makeNextLogPositionToFavorOtherNodes();   //activation point of the "wait" optimisation
+                failedRequests=0;
+                firstFailedTimestamp=System.currentTimeMillis();
+            }
             return true;
-        return false;
+        }
+        else {
+            return false;
+        }
+    }
+
+    private void makeNextLogPositionToFavorOtherNodes() {
+        for(int i=size-1; ;i++)
+            if(logList[i]==null) {
+                logList[i] = new LogCellInFavorOfNotLocal();
+                return;
+            }
     }
 
     public void setParent(Entity parent) {

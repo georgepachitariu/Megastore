@@ -1,10 +1,13 @@
 package megastore.write_ahead_log;
 
 /**
- * Created by George on 05/07/2014.
+ * Created by George on 15/07/2014.
  */
-public class LogCellOpenedForWeak extends LogCell{
-    public LogCellOpenedForWeak() {
+public class LogCellInFavorOfNotLocal extends LogCell {
+    private long creatingTime;
+
+    public LogCellInFavorOfNotLocal() {
+        creatingTime=System.currentTimeMillis();
     }
 
     @Override
@@ -27,7 +30,7 @@ public class LogCellOpenedForWeak extends LogCell{
 
     @Override
     public boolean equals(Object obj) {
-        if(! (obj instanceof LogCellOpenedForWeak))
+        if(! (obj instanceof LogCellInFavorOfNotLocal))
             return false;
         else
             return true;
@@ -35,11 +38,14 @@ public class LogCellOpenedForWeak extends LogCell{
 
     @Override
     public boolean isPositionOpenedForWeakerProposals() {
-        return true;
+        return false;
     }
 
     @Override
     public boolean isLocalOperationAccepted() {
-        return true;
+        if(System.currentTimeMillis()-creatingTime>1000)
+            return true;
+        else
+            return false;
     }
 }

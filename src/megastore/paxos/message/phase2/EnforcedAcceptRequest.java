@@ -25,8 +25,6 @@ public class EnforcedAcceptRequest extends PaxosProposerMessage {
 
         ValidLogCell value = new ValidLogCell( messageParts[3] );
         String source= messageParts[4];
-        if(source==null)
-            System.out.println("");
 
         if (!networkManager.isLogPosOccupied(entityId, cellNumber)) {
             networkManager.writeValueOnLog(entityId, cellNumber, value); //we also set the final value

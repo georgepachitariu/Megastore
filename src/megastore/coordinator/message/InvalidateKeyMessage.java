@@ -40,9 +40,14 @@ public class InvalidateKeyMessage extends NetworkMessage {
     public void act(String[] messageParts) {
         entityID=Long.parseLong( messageParts[1]);
         Megastore megastore = networkManager.getMegastore();
+        if(networkManager.getMegastore().getCoordinator().isUpToDate(entityID)) {
             megastore.invalidate(entityID);
-        //Runnable r=new CatchUpThread(megastore,entityID);
-        //new Thread(r).start();                                                                 //My optimisation
+            //Runnable r = new CatchUpThread(megastore, entityID); //
+            //new Thread(r).start();                                            //Activation point for the early catch-up optimisation
+        }
+        else {
+            megastore.invalidate(entityID);
+        }
     }
 
     @Override

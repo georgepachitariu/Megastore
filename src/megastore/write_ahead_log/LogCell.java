@@ -18,4 +18,6 @@ public abstract class LogCell {
     }
 
     public abstract boolean isPositionOpenedForWeakerProposals();
+
+    public abstract boolean isLocalOperationAccepted();
 }

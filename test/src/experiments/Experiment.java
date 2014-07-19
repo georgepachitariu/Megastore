@@ -17,7 +17,7 @@ public class Experiment {
     @Test
     public void experiment1() {
 
-        for (int g = 18; g < 42; g=g+2) {
+        for (int g = 24; g < 26; g=g+2) {
             System.out.println(((0.05*g)+(0.1*g)+(0.85*g)) + "   Operations per second");
 
             Megastore m1 = new Megastore("61616");
@@ -25,7 +25,7 @@ public class Experiment {
             Megastore m3 = new Megastore("61618", currentIp() + ":61616");
 
             Entity e = m1.createEntity();
-            int experimentDuration = 20; // in seconds
+            int experimentDuration = 10; // in seconds
 //
 //            AutomatedDBClient c1 = new AutomatedDBClient(m1, 0, (g), experimentDuration);
 //            AutomatedDBClient c2 = new AutomatedDBClient(m2, 500, (g), experimentDuration);
@@ -54,16 +54,18 @@ public class Experiment {
             LogAnalyzer analyzer = new LogAnalyzer();
             analyzer.removeFirst3SecondsFromDividedLog();
 
-           // analyzer.showMedianPerfomanceTimes();
+            // analyzer.showMedianPerfomanceTimes();
             analyzer.showMedianWaitingTimes();
-           // analyzer.countTheMethodsUsedForEachWrite();
-          //  analyzer.printNrOfSuccessesAndFailuresPerSecond();
-           // analyzer.printInfoAboutOperations();
+            // analyzer.countSuccessfullOperationsPerNode();
+            // analyzer.countTheMethodsUsedForEachWrite();
+            //  analyzer.printNrOfSuccessesAndFailuresPerSecond();
+            // analyzer.printInfoAboutOperations();
+            //analyzer.countNetworkMessages();
             SystemLog.clear();
 
             System.out.print("\n\n");
 
-          //  System.out.print(SystemLog.getAsString());
+            //  System.out.print(SystemLog.getAsString());
 
             m1.close();
             m2.close();

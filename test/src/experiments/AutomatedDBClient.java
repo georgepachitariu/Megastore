@@ -68,13 +68,17 @@ public class AutomatedDBClient implements Runnable {
                 String key = String.valueOf(startingPoint + i);
                 String newValue = String.valueOf(startingPoint + i);
 
-                while(threadList.size()>=25) {
+                while(threadList.size()>=10) {
+              //  while(threadList.size()>=1) {
                     try {
                         Thread.sleep(2);
                     } catch (InterruptedException e) {
                         e.printStackTrace();
                     }
                 }
+
+                if(timeStampList.size()+1>=2)
+                    System.out.println("there are "+ (timeStampList.size()+1) + " ops in the queue");
 
                 Thread t=new Thread(new ClientWriteOpThread(this,entity,
                         key,newValue, nodeUrl, creationTimestamp),"ClientWriteOpThr");

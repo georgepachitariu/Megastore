@@ -143,23 +143,22 @@ public class Entity {
         long hash=getHashValue(key);
 
 //        1.Query Local: Query the local replica's coordinator to determine if the entity group is up-to-date locally.
-          synchronized (megastore.getCoordinator().writingLock) {
-            if (megastore.getCoordinator().isUpToDate(entityId)) {
-                return getLocalLastValue(hash);
-            } else {
-                LogBuffer.println("Catch-up on node: " + megastore.getCurrentUrl());
-                reValidate();
+        if (megastore.getCoordinator().isUpToDate(entityId)) {
+            return getLocalLastValue(hash);
+        } else {
+            LogBuffer.println("Catch-up on node: " + megastore.getCurrentUrl());
+            reValidate();
 
-                return getLocalLastValue(hash);
-            }
+            return getLocalLastValue(hash);
         }
     }
 
     public void reValidate() {
         //       catchUp();
         //       megastore.getCoordinator().validate(entityId);
-        new Thread(new InvalidateKeyMessage.CatchUpThread(megastore, entityId), "reValidate_Thr").start();
-        while (!megastore.getCoordinator().isUpToDate(entityId)) {
+        Thread thr = new Thread(new InvalidateKeyMessage.CatchUpThread(megastore, entityId), "reValidate_Thr");
+        thr.start();
+        while ((!megastore.getCoordinator().isUpToDate(entityId)) &&  thr.isAlive()) {
             try {
                 Thread.sleep(2);
             } catch (InterruptedException e) {
@@ -186,14 +185,13 @@ public class Entity {
             return value;
     }
 
-    private Object lock=new Object();
+    private final Object lock=new Object();
     private LinkedList<LogCell> newCells;
     private void  updateMissingLogCellsFrom( String nodeURL) {
         synchronized (lock) {
             newCells = null;
             int currentSize = log.getNextPosition();
             List<Integer> invalidPositions = log.getInvalidPositions();
-            long time = System.currentTimeMillis();
             new RequestValidLogCellsMessage(entityId, null,
                     megastore.getCurrentUrl(), nodeURL, invalidPositions, currentSize).send();
 
@@ -206,8 +204,7 @@ public class Entity {
                 e.printStackTrace();
             }
 
-
-            for (int i = 0; i < invalidPositions.size(); i++) {
+            for (int i = 0; i < invalidPositions.size() && i<newCells.size(); i++) {
                 log.append(newCells.get(i), invalidPositions.get(i));
             }
             for (int i = invalidPositions.size(), j = 0; i < newCells.size(); i++, j++) {
@@ -246,7 +243,7 @@ public class Entity {
             upToDateNode =source;
     }
 
-    public void setNewCells(LinkedList<LogCell> list) {
+    public synchronized void  setNewCells(LinkedList<LogCell> list) {
         newCells=list;
     }
 
@@ -296,5 +293,13 @@ public class Entity {
 
     public void makeCellOpenedForWeakProposals(int i) {
         log.append(new LogCellOpenedForWeak(), i);
+    }
+
+    public boolean isLocalOperationAccepted(int cellNumber) {
+        LogCell cell = log.get(cellNumber);
+        if(cell==null)
+            return true;
+        else
+            return cell.isLocalOperationAccepted();
     }
 }
