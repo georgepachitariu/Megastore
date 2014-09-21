@@ -2,9 +2,9 @@ package experiments;
 
 import megastore.Entity;
 import megastore.Megastore;
+import megastore.Write;
 
 import java.util.LinkedList;
-import java.util.Queue;
 
 /**
  * Created by George on 10/06/2014.
@@ -13,7 +13,7 @@ public class AutomatedDBClient implements Runnable {
     private final Entity entity;
     private final int startingPoint;
     private final double expDurationInSec;
-    private final Queue<Long> timeStampList;
+    private final LinkedList<Write> writesQueue;
     private final double opsPerSecond;
     private LinkedList<Thread> threadList;
 
@@ -29,13 +29,15 @@ public class AutomatedDBClient implements Runnable {
         this.entity= megastore.getEntity(0);
         this.startingPoint=startingPoint;
         this.expDurationInSec = expDurationInSec;
-        timeStampList =new LinkedList<Long>();
+        writesQueue =new LinkedList<Write>();
         this.opsPerSecond=opsPerSecond;
         threadList=new LinkedList<Thread>();
     }
 
-    public void addElement(long timestamp) {
-        timeStampList.add(timestamp);
+    public void addOperation(LinkedList<Write> newWrites) {
+        synchronized (writesQueue) {
+            writesQueue.addAll(newWrites);
+        }
     }
 
     public synchronized void threadCompleted(Thread t) {
@@ -56,20 +58,24 @@ public class AutomatedDBClient implements Runnable {
     @Override
     public void run() {
         new Thread(new OperationTimerThread(this,
-                opsPerSecond, Thread.currentThread()),"OperationTimer").start();
+                opsPerSecond, Thread.currentThread(), startingPoint),"OperationTimer").start();
 
         String nodeUrl = entity.getMegastore().getCurrentUrl();
 
         int i = 0;
 
         for (long start = System.currentTimeMillis();  System.currentTimeMillis() - start < 1000 * expDurationInSec; ) {
-            if(! timeStampList.isEmpty()) {
-                long creationTimestamp=timeStampList.poll();
-                String key = String.valueOf(startingPoint + i);
-                String newValue = String.valueOf(startingPoint + i);
+            if(! writesQueue.isEmpty()) {
+                i=Integer.parseInt( writesQueue.getLast().key );
 
-                while(threadList.size()>=10) {
-              //  while(threadList.size()>=1) {
+                int limit;
+//                if(!Optimisations.Optim)
+//                    limit=25;  // activation point: parallel writes - we don't use this optimisation anymore
+//                else
+                    limit=1;
+
+
+                while(threadList.size()>=limit) {         // activation point: parallel writes
                     try {
                         Thread.sleep(2);
                     } catch (InterruptedException e) {
@@ -77,15 +83,21 @@ public class AutomatedDBClient implements Runnable {
                     }
                 }
 
-                if(timeStampList.size()+1>=2)
-                    System.out.println("there are "+ (timeStampList.size()+1) + " ops in the queue");
+                LinkedList<Write> list;
+                synchronized (writesQueue) {
+                    list=new LinkedList<Write>();
+                    list.add(writesQueue.poll());  // we will always have one
+
+//                    if(Optimisations.Optim)
+//                        while(! writesQueue.isEmpty()) {  // but we can put all of them
+//                            list.add(writesQueue.poll());     // OPTIMISATION: buffering writes (activation point)
+//                        }                                                       //
+                }
 
                 Thread t=new Thread(new ClientWriteOpThread(this,entity,
-                        key,newValue, nodeUrl, creationTimestamp),"ClientWriteOpThr");
+                        list, nodeUrl),"ClientWriteOpThr");
                 t.start();
                 threadList.add(t);
-
-                i++;
             }
             else
                 try {
@@ -103,16 +115,14 @@ public class AutomatedDBClient implements Runnable {
             }
         }
 
-        for(int j=0; j<i; j++) {
-            String key=String.valueOf(startingPoint+j);
-            String newValue=String.valueOf(startingPoint+j);
 
-            if(entity.get(key) == null || (! newValue.equals(entity.get(key)))) {
-                System.out.println("1 read Error");
-                //        System.out.print(LogBuffer.getAsString());
-                //      System.out.print("Error");
-            }
-        }
+//        for(int j=i; j>=startingPoint; j--) {
+//            String key=String.valueOf(j);
+//            String newValue=String.valueOf(j);
+//
+//            if(entity.get(key) == null || (! newValue.equals(entity.get(key))))
+//                System.out.println("Write error on log");
+//        }
     }
 
     public boolean isWritingLockWeak() {

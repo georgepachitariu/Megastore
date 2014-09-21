@@ -1,5 +1,6 @@
 package megastore.network;
 
+import megastore.NetworkLatency;
 import systemlog.LogBuffer;
 
 import java.io.IOException;
@@ -22,11 +23,9 @@ public class MessageGatherer implements Runnable {
     @Override
     public void run() {
         try {
-
             ////////////////////////////////////////////////
-            Thread.sleep(30);
+            Thread.sleep(NetworkLatency.latency);
             /////////////////////////////////////////////
-
 
             InputStream inputStream = clientSocket.getInputStream();
 
@@ -42,6 +41,9 @@ public class MessageGatherer implements Runnable {
             String message = new String(all);
 
             String[] parts = message.split(",");
+
+
+
 
             boolean recognized = listeningThread.treatMessage(parts);
 

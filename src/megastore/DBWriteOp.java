@@ -1,20 +1,20 @@
 package megastore;
 
+import java.util.List;
+
 /**
  * Created by George on 29/06/2014.
  */
 public class DBWriteOp implements Runnable {
 
-    private String value;
-    private String key;
+    private List<Write> writes;
     private Entity entity;
     private Boolean answer;
     private Boolean isWeak;
 
-    public DBWriteOp(Entity e, String key, String value, Boolean isWeak) {
+    public DBWriteOp(Entity e, List<Write> writes, Boolean isWeak) {
         this.entity=e;
-        this.key=key;
-        this.value=value;
+        this.writes=writes;
         this.isWeak=isWeak;
         answer=null;
     }
@@ -39,6 +39,6 @@ public class DBWriteOp implements Runnable {
 
     @Override
     public void run() {
-        entity.put(key,value, this, isWeak);
+        entity.put(writes, this, isWeak);
     }
 }

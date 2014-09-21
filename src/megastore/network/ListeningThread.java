@@ -114,7 +114,7 @@ public class ListeningThread  implements Runnable  {
             Socket clientSocket=null;
             try {
                 clientSocket = serverSocket.accept();
-           //     SystemLog.add(new systemlog.NetworkMessage(getCurrentUrl()));
+                //SystemLog.add(new systemlog.NetworkMessage(getCurrentUrl()));
 
                 Thread worker=new Thread(new MessageGatherer(clientSocket, this),"MessageReaderFromNetwork");
                 workersList.add(worker);

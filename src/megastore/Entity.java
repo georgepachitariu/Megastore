@@ -1,6 +1,5 @@
 package megastore;
 
-import megastore.coordinator.message.InvalidateKeyMessage;
 import megastore.network.ListeningThread;
 import megastore.network.message.paxos_optimisation.AreYouUpToDateMessage;
 import megastore.network.message.paxos_optimisation.RequestValidLogCellsMessage;
@@ -48,10 +47,14 @@ public class Entity {
         readyForNextWriteOperation=false;
     }
 
-    public void put(String key, String value, DBWriteOp callback, boolean isWeak) {
+
+    public void put(List<Write> writes, DBWriteOp callback, boolean isWeak) {
+        ValidLogCell cell = createLogCell(writes);
+        put(cell,callback,isWeak);
+    }
+
+    private void put(ValidLogCell cell, DBWriteOp callback, boolean isWeak) {
         boolean lockOnceReleased=false;
-        long hash=getHashValue(key);
-        ValidLogCell cell = createLogCell(hash, value);
 
         int currentPosition=log.getNextPosition();
         PaxosProposer proposer=new PaxosProposer(entityId, currentPosition,
@@ -75,8 +78,12 @@ public class Entity {
             lastPostionsLeaderURL = log.get(lastLeader).getLeaderUrl();
         }
 
-        boolean leaderProposalResult = proposer.proposeValueToLeader(lastPostionsLeaderURL); //also comment this
-        //    boolean leaderProposalResult=false; //to disable optimisation
+        boolean leaderProposalResult;
+//        if(Optimisations.Optim)
+            leaderProposalResult= proposer.proposeValueToLeader(lastPostionsLeaderURL);
+//         else
+//            leaderProposalResult=false; //to disable optimisation
+
 
         if (leaderProposalResult) {
             if(lastLeader>=1 &&                                                                                                          //<-my optimisation
@@ -109,11 +116,18 @@ public class Entity {
         callback.setAnswer( writeOperationResult );
     }
 
-    private ValidLogCell createLogCell(long key, String value) {
+
+    private ValidLogCell createLogCell(List<Write> writes) {
         List<WriteOperation> list = new LinkedList<WriteOperation>();
-        list.add(new WriteOperation(key,value));
+
+        for(Write w : writes) {
+            long hash=getHashValue(w.key);
+            list.add(new WriteOperation(hash ,w.newValue));
+        }
+
         return new ValidLogCell(megastore.getCurrentUrl(), list);
     }
+
 
     public long getHashValue(String key) {
         char[] chars=key.toCharArray();
@@ -154,23 +168,37 @@ public class Entity {
     }
 
     public void reValidate() {
-        //       catchUp();
-        //       megastore.getCoordinator().validate(entityId);
-        Thread thr = new Thread(new InvalidateKeyMessage.CatchUpThread(megastore, entityId), "reValidate_Thr");
+               catchUp();
+               megastore.getCoordinator().validate(entityId);   // switch-it back for last optimisation
+      /*  Thread thr = new Thread(new InvalidateKeyMessage.CatchUpThread(megastore, entityId), "reValidate_Thr");
         thr.start();
+
         while ((!megastore.getCoordinator().isUpToDate(entityId)) &&  thr.isAlive()) {
             try {
                 Thread.sleep(2);
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
-        }
+        }*/
     }
 
     public void catchUp() {
-        String nodeURL = findAnUpToDateNode();
-        if(nodeURL !=null)
-            updateMissingLogCellsFrom(nodeURL);
+        boolean successful;
+        do {
+            successful=true;
+            String nodeURL = findAnUpToDateNode();
+            if (nodeURL != null) {
+                try {
+                    updateMissingLogCellsFrom(nodeURL);
+                } catch (NodeNotRespondingException e) {
+                    successful = false;
+                }
+            }
+            else {
+                // sadly there are no valid nodes alive, so we validate ourselves
+               // megastore.getCoordinator().validate(entityId);
+            }
+        } while (!successful);
     }
 
     private String getLocalLastValue(long hash) {
@@ -185,20 +213,29 @@ public class Entity {
             return value;
     }
 
+    public class NodeNotRespondingException extends Exception {
+        public NodeNotRespondingException(String message) {
+            super(message);
+        }
+    }
+
     private final Object lock=new Object();
     private LinkedList<LogCell> newCells;
-    private void  updateMissingLogCellsFrom( String nodeURL) {
+    private void  updateMissingLogCellsFrom( String nodeURL) throws NodeNotRespondingException {
         synchronized (lock) {
             newCells = null;
             int currentSize = log.getNextPosition();
             List<Integer> invalidPositions = log.getInvalidPositions();
             new RequestValidLogCellsMessage(entityId, null,
                     megastore.getCurrentUrl(), nodeURL, invalidPositions, currentSize).send();
+            long init=System.currentTimeMillis();
 
             try {
                 do {
                     if (newCells == null)
                         Thread.sleep(3);
+                    if(System.currentTimeMillis()-init>100)
+                        throw new NodeNotRespondingException("Node not responding in updateMissingLogCellsFrom");
                 } while (newCells == null);
             } catch (InterruptedException e) {
                 e.printStackTrace();
@@ -230,7 +267,7 @@ public class Entity {
                 if(upToDateNode==null)
                     Thread.sleep(3);
             } while(upToDateNode==null &&
-                    System.currentTimeMillis()-time<200);
+                    System.currentTimeMillis()-time<100);
         } catch (InterruptedException e) {
             e.printStackTrace();
         }

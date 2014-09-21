@@ -10,6 +10,7 @@ public abstract class NetworkMessage implements Runnable {
 
     protected String destinationIP;
     private  int destinationPort;
+    public String sourceUrl;
 
     public NetworkMessage(String destinationURL) {
         if(destinationURL!=null) {

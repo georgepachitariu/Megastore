@@ -12,7 +12,7 @@ public class EnforcedAcceptRequest extends PaxosProposerMessage {
     private ValidLogCell value;
 
     public EnforcedAcceptRequest( long entityId, int cellNumber, NetworkManager networkManager,
-                          String sourceURL, String destinationURL, ValidLogCell value) {
+                                  String sourceURL, String destinationURL, ValidLogCell value) {
         super(networkManager,destinationURL,entityId,cellNumber);
         this.value=value;
         this.sourceURL=sourceURL;
@@ -33,14 +33,15 @@ public class EnforcedAcceptRequest extends PaxosProposerMessage {
 
             new EnforcedAR_Accepted(entityId, cellNumber, null, networkManager.getCurrentUrl(), source).send();
 
-            new Thread(new Runnable() {
-                @Override
-                public void run() {
-                    networkManager.getMegastore().getEntity(entityId).
-                            proposeValueToLeaderAgainIfThereWasOne(entityId, cellNumber);
-                }
-            }).start();
-
+//            if(Optimisations.Optim) {
+//                new Thread(new Runnable() {
+//                    @Override
+//                    public void run() {                                                                                              //
+//                        networkManager.getMegastore().getEntity(entityId).                                    // Activation Point for the first optimisation
+//                                proposeValueToLeaderAgainIfThereWasOne(entityId, cellNumber);   //
+//                    }
+//                }).start();                                                                                                                    //
+//            }
 
         }
         else

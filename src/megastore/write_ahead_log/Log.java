@@ -56,7 +56,7 @@ public class Log {
 
     public String getLastValueOf(long key) {
         synchronized (this) {
-            for (int i = size - 1; i >= 0; i--) {
+            for (int i = size ; i >= 0; i--) {
                 if (logList[i] != null) {
                     String val = logList[i].getValue(key);
                     if (val != null)
@@ -93,14 +93,15 @@ public class Log {
 
     public synchronized boolean isOccupied(int cellNumber) {
         if (logList[cellNumber] != null && logList[cellNumber].isValid()) {
-            if(System.currentTimeMillis()-firstFailedTimestamp>200) {
+            if(System.currentTimeMillis()-firstFailedTimestamp>31) {
                 failedRequests = 0;
                 firstFailedTimestamp=System.currentTimeMillis();
             }
             failedRequests++;
 
-            if(failedRequests >6) {
-                makeNextLogPositionToFavorOtherNodes();   //activation point of the "wait" optimisation
+            if(failedRequests >=2) {
+              //  if(Optimisations.Optim)
+               //     makeNextLogPositionToFavorOtherNodes();   //activation point of the "wait" optimisation
                 failedRequests=0;
                 firstFailedTimestamp=System.currentTimeMillis();
             }
